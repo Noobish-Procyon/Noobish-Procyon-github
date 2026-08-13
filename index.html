@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Select a Game</title>
+    <style>
+        body {
+            font-family: Arial;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background: #e8e8e8;
+        }
+        h1 {
+            margin-bottom: 40px;
+        }
+        button {
+            padding: 15px 30px;
+            font-size: 20px;
+            cursor: pointer;
+            border-radius: 10px;
+            border: none;
+            background: #4CAF50;
+            color: white;
+            margin: 10px;
+            width: 250px;
+        }
+        button:hover {
+            background: #45a049;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Choose Your Game</h1>
+
+    <button onclick="goToGame1()">Play Game 1</button>
+    <button onclick="goToGame2()">Play Game 2</button>
+
+    <script>
+        function goToGame1() {
+            window.location.href = "clean-up.io/index.html";
+        }
+        function goToGame2() {
+            window.location.href = "shapesummoner/index.html";
+        }
+    </script>
+
+</body>
+</html>
