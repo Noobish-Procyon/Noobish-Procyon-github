@@ -1,5 +1,12 @@
-  const canvas = document.getElementById("gameCanvas");
+const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
+
+function resizeCanvas() {
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+}
+resizeCanvas();
+window.onresize = resizeCanvas;
 
 const fusionEnergySpan = document.getElementById("fusionEnergy");
 const selectedCircleSpan = document.getElementById("selectedCircle");
@@ -95,9 +102,12 @@ loadBtn.onclick = () => {
 function loop() {
   if (!inBattle) {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    const spacing = canvas.width / (circles.length + 1);
+
     circles.forEach((c, i) => {
-      c.x = 150 + i * 100;
-      c.y = 300;
+      c.x = spacing * (i + 1);
+      c.y = canvas.height / 2;
       c.draw(ctx);
     });
   }
