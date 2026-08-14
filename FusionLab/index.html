@@ -4,10 +4,29 @@
   <meta charset="UTF-8">
   <title>Fusion Lab</title>
   <style>
-    body { margin: 0; background: #111; color: #fff; font-family: Arial; }
-    #ui { position: absolute; top: 10px; left: 10px; z-index: 10; }
+    html, body {
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      background: #111;
+    }
+    canvas {
+      display: block;
+      width: 100vw;
+      height: 100vh;
+    }
+    #ui {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      z-index: 10;
+      background: rgba(0,0,0,0.4);
+      padding: 10px;
+      border-radius: 8px;
+      color: white;
+      font-family: Arial;
+    }
     button { margin: 2px; }
-    canvas { background: #000; display: block; }
   </style>
 </head>
 <body>
@@ -20,7 +39,8 @@
     <button id="loadBtn">Load</button>
     <div id="circleList"></div>
   </div>
-  <canvas id="gameCanvas" width="800" height="600"></canvas>
+
+  <canvas id="gameCanvas"></canvas>
 
   <script src="circle.js"></script>
   <script src="enemy.js"></script>
