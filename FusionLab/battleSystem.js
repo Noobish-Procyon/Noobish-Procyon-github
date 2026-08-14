@@ -4,7 +4,14 @@ function battle(circle, ctx, onResult) {
   let log = [];
 
   function step() {
-    ctx.clearRect(0, 0, 800, 600);
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // Center positions
+    circle.x = canvas.width * 0.3;
+    circle.y = canvas.height * 0.5;
+
+    enemy.x = canvas.width * 0.7;
+    enemy.y = canvas.height * 0.5;
 
     // Draw circle and enemy
     circle.draw(ctx);
@@ -12,12 +19,10 @@ function battle(circle, ctx, onResult) {
 
     // Simple turn-based simulation
     if (turn % 2 === 0) {
-      // Circle attacks
       const dmg = computeDamage(circle, enemy);
       enemy.hp -= dmg;
       log.push(`${circle.name} hits for ${dmg}`);
     } else {
-      // Enemy attacks
       const dmg = computeDamage(enemy, circle);
       circle.hp -= dmg;
       log.push(`Enemy hits for ${dmg}`);
@@ -43,11 +48,9 @@ function battle(circle, ctx, onResult) {
 
 function computeDamage(attacker, defender) {
   let base = attacker.atk;
-  // Crit
   if (Math.random() * 100 < attacker.crit) {
     base *= 1.5;
   }
-  // Element interactions (simple)
   if (attacker.element === "fire" && defender.element === "shadow") base *= 1.2;
   if (attacker.element === "water" && defender.element === "fire") base *= 1.2;
   if (attacker.element === "electric" && defender.element === "water") base *= 1.2;
