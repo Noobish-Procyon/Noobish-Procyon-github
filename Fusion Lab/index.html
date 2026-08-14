@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Fusion Lab</title>
+  <style>
+    body { margin: 0; background: #111; color: #fff; font-family: Arial; }
+    #ui { position: absolute; top: 10px; left: 10px; z-index: 10; }
+    button { margin: 2px; }
+    canvas { background: #000; display: block; }
+  </style>
+</head>
+<body>
+  <div id="ui">
+    <div>Fusion Energy: <span id="fusionEnergy">0</span></div>
+    <div>Selected Circle: <span id="selectedCircle">None</span></div>
+    <button id="battleBtn">Battle</button>
+    <button id="fuseBtn">Fuse Selected + Random</button>
+    <button id="saveBtn">Save</button>
+    <button id="loadBtn">Load</button>
+    <div id="circleList"></div>
+  </div>
+  <canvas id="gameCanvas" width="800" height="600"></canvas>
+
+  <script src="circle.js"></script>
+  <script src="enemy.js"></script>
+  <script src="battleSystem.js"></script>
+  <script src="fusionSystem.js"></script>
+  <script src="saveSystem.js"></script>
+  <script src="game.js"></script>
+</body>
+</html>
