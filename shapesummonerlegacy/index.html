@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Shape Summoner LEGACY</title>
+  <style>
+    body { margin: 0; overflow: hidden; background: #111; }
+    canvas { display: block; }
+  </style>
+</head>
+<body>
+<canvas id="game"></canvas>
+
+<script>
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+
+function resize() {
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+}
+resize();
+window.addEventListener("resize", resize);
+
+// Player
+const player = {
+  x: canvas.width / 2,
+  y: canvas.height / 2,
+  radius: 20,
+  speed: 5,
+  color: "white",
+  hp: 100,
+  maxHp: 100,
+  regenRate: 0.1
+};
+
+// Projectiles
+const shots = [];
+
+// Summoned shapes
+const summons = [];
+
+// Boss
+let boss = null;
+
+// Game state
+let gameOver = false;
+
+// Current shape type
+let currentShape = 1;
+
+// Track mouse for aiming
+let lastMouseX = player.x;
+let lastMouseY = player.y;
+
+canvas.addEventListener("mousemove", (e) => {
+  lastMouseX = e.clientX;
+  lastMouseY = e.clientY;
+});
+
+// Spawn boss randomly
+function spawnBoss() {
+  boss = {
+    x: Math.random() * canvas.width,
+    y: Math.random() * canvas.height,
+    radius: 50,
+    hp: 10,
+    speed: 2,
+    color: "red"
+  };
+}
+
+setInterval(() => {
+  if (!boss && !gameOver) spawnBoss();
+}, Math.random() * 5000 + 5000);
+
+// Movement keys
+const keys = {};
+window.addEventListener("keydown", (e) => {
+  keys[e.key] = true;
+
+  if (e.key === "1") currentShape = 1;
+  if (e.key === "2") currentShape = 2;
+  if (e.key === "3") currentShape = 3;
+  if (e.key === "4") currentShape = 4;
+
+  if (e.key === " ") shootShape();
+});
+window.addEventListener("keyup", (e) => keys[e.key] = false);
+
+// Summon shapes by clicking
+canvas.addEventListener("click", (e) => {
+  if (gameOver) {
+    respawnPlayer();
+    return;
+  }
+
+  const summon = {
+    x: e.clientX,
+    y: e.clientY,
+    radius: 20,
+    color: `hsl(${Math.random()*360},80%,60%)`,
+    shape: currentShape,
+    hp: 10
+  };
+
+  summons.push(summon);
+  fuseSummons();
+});
+
+// Shooting
+function shootShape() {
+  const angle = Math.atan2(lastMouseY - player.y, lastMouseX - player.x);
+
+  shots.push({
+    x: player.x,
+    y: player.y,
+    radius: 12,
+    speed: 8,
+    dx: Math.cos(angle),
+    dy: Math.sin(angle),
+    color: `hsl(${Math.random()*360},80%,60%)`,
+    shape: currentShape
+  });
+}
+
+// Respawn
+function respawnPlayer() {
+  player.x = canvas.width / 2;
+  player.y = canvas.height / 2;
+  player.hp = player.maxHp;
+  gameOver = false;
+  boss = null;
+  shots.length = 0;
+  summons.length = 0;
+}
+
+// Draw shapes
+function drawShape(s) {
+  ctx.fillStyle = s.color;
+
+  if (s.shape === 1) {
+    ctx.beginPath();
+    ctx.arc(s.x, s.y, s.radius, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  if (s.shape === 2) {
+    ctx.fillRect(s.x - s.radius, s.y - s.radius, s.radius * 2, s.radius * 2);
+  }
+
+  if (s.shape === 3) {
+    ctx.beginPath();
+    ctx.moveTo(s.x, s.y - s.radius);
+    ctx.lineTo(s.x - s.radius, s.y + s.radius);
+    ctx.lineTo(s.x + s.radius, s.y + s.radius);
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  if (s.shape === 4) {
+    const spikes = 5;
+    const outer = s.radius;
+    const inner = s.radius / 2.5;
+    let rot = Math.PI / 2 * 3;
+    let step = Math.PI / spikes;
+
+    ctx.beginPath();
+    ctx.moveTo(s.x, s.y - outer);
+
+    for (let i = 0; i < spikes; i++) {
+      ctx.lineTo(s.x + Math.cos(rot) * outer, s.y + Math.sin(rot) * outer);
+      rot += step;
+      ctx.lineTo(s.x + Math.cos(rot) * inner, s.y + Math.sin(rot) * inner);
+      rot += step;
+    }
+
+    ctx.closePath();
+    ctx.fill();
+  }
+}
+
+// Fuse nearby summons
+function fuseSummons() {
+  for (let i = 0; i < summons.length; i++) {
+    for (let j = i + 1; j < summons.length; j++) {
+      const a = summons[i];
+      const b = summons[j];
+      const dist = Math.hypot(a.x - b.x, a.y - b.y);
+
+      if (dist < a.radius + b.radius) {
+        a.radius += b.radius * 0.5;
+        a.hp += b.hp;
+        summons.splice(j, 1);
+        j--;
+      }
+    }
+  }
+}
+
+// Game loop
+function update() {
+  if (!gameOver) {
+    if (keys["w"] || keys["W"]) player.y -= player.speed;
+    if (keys["s"] || keys["S"]) player.y += player.speed;
+    if (keys["a"] || keys["A"]) player.x -= player.speed;
+    if (keys["d"] || keys["D"]) player.x += player.speed;
+
+    player.hp += player.regenRate;
+    if (player.hp > player.maxHp) player.hp = player.maxHp;
+  }
+
+  // Boss movement
+  if (boss && !gameOver) {
+    let angle = Math.atan2(player.y - boss.y, player.x - boss.x);
+
+    for (let i = 0; i < summons.length; i++) {
+      if (!boss) break;
+
+      const s = summons[i];
+      const dist = Math.hypot(boss.x - s.x, boss.y - s.y);
+
+      if (dist < boss.radius + s.radius) {
+        s.hp -= 0.2;
+        if (s.hp <= 0) {
+          summons.splice(i, 1);
+          i--;
+        }
+        angle += Math.PI / 2;
+      }
+    }
+
+    if (boss) {
+      boss.x += Math.cos(angle) * boss.speed;
+      boss.y += Math.sin(angle) * boss.speed;
+    }
+  }
+
+  // Update shots
+  for (const s of shots) {
+    s.x += s.dx * s.speed;
+    s.y += s.dy * s.speed;
+  }
+
+  // Projectile → boss collision
+  if (boss) {
+    for (let i = shots.length - 1; i >= 0; i--) {
+      if (!boss) break;
+
+      const s = shots[i];
+      const dist = Math.hypot(s.x - boss.x, s.y - boss.y);
+
+      if (dist < s.radius + boss.radius) {
+        boss.hp -= 1;
+        shots.splice(i, 1);
+
+        if (boss.hp <= 0) {
+          boss = null;
+          break;
+        }
+      }
+    }
+  }
+
+  // Boss damages player
+  if (boss && !gameOver) {
+    const dist = Math.hypot(player.x - boss.x, player.y - boss.y);
+    if (dist < player.radius + boss.radius) {
+      player.hp -= 1;
+      if (player.hp <= 0) {
+        player.hp = 0;
+        gameOver = true;
+      }
+    }
+  }
+}
+
+function draw() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  // Player
+  ctx.beginPath();
+  ctx.arc(player.x, player.y, player.radius, 0, Math.PI * 2);
+  ctx.fillStyle = player.color;
+  ctx.fill();
+
+  // Player HP bar
+  ctx.fillStyle = "red";
+  ctx.fillRect(player.x - 20, player.y - player.radius - 20, 40, 6);
+
+  ctx.fillStyle = "lime";
+  ctx.fillRect(
+    player.x - 20,
+    player.y - player.radius - 20,
+    (player.hp / player.maxHp) * 40,
+    6
+  );
+
+  // Summons
+  for (const s of summons) drawShape(s);
+
+  // Shots
+  for (const s of shots) drawShape(s);
+
+  // Boss
+  if (boss) {
+    ctx.beginPath();
+    ctx.arc(boss.x, boss.y, boss.radius, 0, Math.PI * 2);
+    ctx.fillStyle = boss.color;
+    ctx.fill();
+
+    ctx.fillStyle = "white";
+    ctx.fillRect(boss.x - 40, boss.y - boss.radius - 20, boss.hp * 8, 10);
+  }
+
+  // Death screen
+  if (gameOver) {
+    ctx.fillStyle = "rgba(0,0,0,0.7)";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    ctx.fillStyle = "white";
+    ctx.font = "60px Arial";
+    ctx.textAlign = "center";
+    ctx.fillText("YOU DIED", canvas.width / 2, canvas.height / 2 - 40);
+
+    ctx.font = "30px Arial";
+    ctx.fillText("Click to Respawn", canvas.width / 2, canvas.height / 2 + 20);
+  }
+
+  requestAnimationFrame(gameLoop);
+}
+
+function gameLoop() {
+  update();
+  draw();
+}
+
+gameLoop();
+</script>
+</body>
+</html>
