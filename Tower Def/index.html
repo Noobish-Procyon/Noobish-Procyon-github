@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Circle Kingdom Tower Defense</title>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      background: #111;
+    }
+    canvas {
+      display: block;
+      width: 100vw;
+      height: 100vh;
+    }
+    #ui {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      z-index: 10;
+      background: rgba(0,0,0,0.4);
+      padding: 10px;
+      border-radius: 8px;
+      color: white;
+      font-family: Arial;
+      font-size: 12px;
+    }
+    button { margin: 2px; }
+  </style>
+</head>
+<body>
+  <div id="ui">
+    <div>Coins: <span id="coins">0</span></div>
+    <div>Wave: <span id="wave">1</span></div>
+    <button data-type="cannon">Buy Red Cannon (20)</button>
+    <button data-type="laser">Buy Blue Laser (25)</button>
+    <button data-type="freeze">Buy Green Freeze (25)</button>
+    <button data-type="chain">Buy Yellow Chain (30)</button>
+    <div>Click on path to place turret.</div>
+  </div>
+
+  <canvas id="gameCanvas"></canvas>
+
+  <script src="utils.js"></script>
+  <script src="path.js"></script>
+  <script src="turret.js"></script>
+  <script src="enemy.js"></script>
+  <script src="projectile.js"></script>
+  <script src="saveSystem.js"></script>
+  <script src="game.js"></script>
+</body>
+</html>
