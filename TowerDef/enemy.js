@@ -2,7 +2,7 @@ class Enemy {
   constructor(path, wave) {
     this.path = path;
     this.progress = 0;
-    this.speed = 1.2 + wave * 0.1;
+    this.speed = 0.8 + wave * 0.05;
     this.radius = 14;
 
     this.maxHp = 40 + wave * 10;
