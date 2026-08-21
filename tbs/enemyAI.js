@@ -17,7 +17,6 @@ class EnemyAI {
   update(dt, wave, units) {
     this.coins += dt * this.getIncomePerSecond();
 
-    // Auto-upgrade enemy bank every few waves
     if (wave % 3 === 0 && this.level < 5) {
       this.level++;
     }
