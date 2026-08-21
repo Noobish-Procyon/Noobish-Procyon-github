@@ -31,7 +31,7 @@ document.querySelectorAll("button[data-unit]").forEach(btn => {
 
     if (playerBank.coins >= cost) {
       playerBank.coins -= cost;
-      units.push(new Unit(type, "player", 100, canvas.height/2 + randInt(-150,150)));
+      units.push(new Unit(type, "player", 150, canvas.height/2 + randInt(-150,150)));
     }
   };
 });
@@ -39,6 +39,24 @@ document.querySelectorAll("button[data-unit]").forEach(btn => {
 upgradeBankBtn.onclick = () => {
   playerBank.upgrade();
 };
+
+function drawBases() {
+  ctx.save();
+
+  // Player base
+  ctx.fillStyle = "#44aaff";
+  ctx.beginPath();
+  ctx.arc(80, canvas.height/2, 40, 0, Math.PI*2);
+  ctx.fill();
+
+  // Enemy base
+  ctx.fillStyle = "#ff4444";
+  ctx.beginPath();
+  ctx.arc(canvas.width - 80, canvas.height/2, 40, 0, Math.PI*2);
+  ctx.fill();
+
+  ctx.restore();
+}
 
 function update(dt) {
   playerBank.update(dt);
@@ -62,6 +80,8 @@ function update(dt) {
 
 function draw() {
   ctx.clearRect(0,0,canvas.width,canvas.height);
+
+  drawBases();
 
   for (let u of units) u.draw(ctx);
   for (let p of projectiles) p.draw(ctx);
