@@ -43,7 +43,6 @@ class Unit {
 
     this.attackCooldown -= dt;
 
-    // Find nearest enemy
     let nearest = null;
     let nearestDist = Infinity;
 
@@ -59,7 +58,6 @@ class Unit {
 
     this.target = nearest;
 
-    // Movement
     if (nearest) {
       if (nearestDist > this.range) {
         const dx = nearest.x - this.x;
@@ -96,7 +94,6 @@ class Unit {
     ctx.arc(this.x, this.y, this.radius, 0, Math.PI*2);
     ctx.fill();
 
-    // HP bar
     ctx.fillStyle = "#000";
     ctx.fillRect(this.x - 20, this.y - this.radius - 10, 40, 5);
     ctx.fillStyle = "#0f0";
