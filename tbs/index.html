@@ -1,0 +1,236 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Orbfront</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Space+Grotesk:wght@400;500;600;700&display=swap');
+
+    :root {
+      --ink: #16212b;
+      --muted: #66717d;
+      --paper: #f5f2eb;
+      --line: #dcd7cd;
+      --blue: #287ee6;
+      --blue-dark: #1257aa;
+      --red: #eb554b;
+      --red-dark: #b62d3b;
+      --lime: #c8ed55;
+      --gold: #f5bd4d;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-width: 320px;
+      color: var(--ink);
+      background: var(--paper);
+      font-family: 'Space Grotesk', sans-serif;
+    }
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      opacity: .3;
+      background-image: radial-gradient(#b9b0a2 .7px, transparent .7px);
+      background-size: 8px 8px;
+    }
+    .shell { position: relative; z-index: 1; max-width: 1240px; margin: 0 auto; padding: 26px 28px 34px; }
+    header { display: flex; align-items: end; justify-content: space-between; gap: 24px; margin-bottom: 22px; }
+    .eyebrow { margin: 0 0 7px; color: var(--blue-dark); font: 500 11px 'DM Mono', monospace; letter-spacing: .16em; text-transform: uppercase; }
+    h1 { margin: 0; font-size: clamp(35px, 5vw, 66px); line-height: .88; letter-spacing: -.07em; }
+    .tagline { max-width: 300px; margin: 0 0 2px; color: var(--muted); font-size: 14px; line-height: 1.4; text-align: right; }
+    .game-frame { overflow: hidden; border: 1px solid var(--ink); background: #e8e5dc; box-shadow: 9px 9px 0 #d4cec2; }
+    .statusbar { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; min-height: 59px; padding: 9px 16px; border-bottom: 1px solid var(--ink); background: #fffdf7; }
+    .base-stat { display: flex; align-items: center; gap: 11px; font: 500 12px 'DM Mono', monospace; text-transform: uppercase; }
+    .base-info { display: flex; flex-direction: column; gap: 6px; }
+    .base-stat.right { justify-content: flex-end; }
+    .dot { width: 13px; height: 13px; border-radius: 50%; }
+    .dot.blue { background: var(--blue); box-shadow: 0 0 0 3px #d9eaff; }
+    .dot.red { background: var(--red); box-shadow: 0 0 0 3px #ffe1de; }
+    .health { width: min(205px, 25vw); height: 8px; background: #e6e3dc; }
+    .health span { display: block; height: 100%; width: 100%; background: var(--blue); transition: width .25s; }
+    .right .health span { background: var(--red); }
+    .round { padding: 4px 10px; color: #fffdf7; background: var(--ink); font: 500 11px 'DM Mono', monospace; }
+    canvas { display: block; width: 100%; height: min(54vw, 515px); min-height: 300px; cursor: crosshair; }
+    .controls { display: grid; grid-template-columns: minmax(0, 1fr) minmax(150px, .6fr) auto; gap: 18px; align-items: center; padding: 17px 18px; border-top: 1px solid var(--ink); background: #fffdf7; }
+    .energy { display: flex; align-items: center; gap: 12px; }
+    .energy-label { white-space: nowrap; font: 500 11px 'DM Mono', monospace; text-transform: uppercase; }
+    .energy-track { width: 92px; height: 10px; background: #e7e3d9; }
+    .energy-fill { width: 68%; height: 100%; background: var(--gold); transition: width .2s; }
+    .unit-deck { display: flex; min-width: 0; gap: 7px; overflow-x: auto; padding-bottom: 3px; }
+    button { border: 1px solid var(--ink); color: var(--ink); background: #fffdf7; font: 600 13px 'Space Grotesk', sans-serif; cursor: pointer; transition: transform .15s, background .15s, color .15s; }
+    button:hover:not(:disabled) { transform: translateY(-2px); background: var(--lime); }
+    button:active:not(:disabled) { transform: translateY(0); }
+    button:disabled { cursor: not-allowed; opacity: .42; }
+    .unit-btn { display: flex; flex: 0 0 126px; align-items: center; gap: 7px; min-width: 126px; padding: 8px 8px; text-align: left; }
+    .unit-icon { width: 19px; height: 19px; border-radius: 50%; background: var(--blue); box-shadow: inset -3px -3px 0 rgba(0,0,0,.13); }
+    .unit-btn small { display: block; color: var(--muted); font: 10px 'DM Mono', monospace; }
+    .upgrade-deck { display: flex; min-width: 0; gap: 7px; }
+    .upgrade-btn { flex: 1; min-width: 0; padding: 7px 8px; text-align: left; }
+    .upgrade-btn strong { display: block; font: 500 9px 'DM Mono', monospace; text-transform: uppercase; }
+    .upgrade-btn small { display: block; margin-top: 3px; color: var(--muted); font: 9px 'DM Mono', monospace; white-space: nowrap; }
+    .restart { padding: 10px 13px; }
+    .help { margin-top: 21px; display: flex; justify-content: space-between; color: var(--muted); font: 11px 'DM Mono', monospace; text-transform: uppercase; }
+    .help b { color: var(--ink); font-weight: 500; }
+    .toast { position: fixed; left: 50%; top: 31%; z-index: 3; display: none; transform: translateX(-50%); padding: 19px 24px; border: 1px solid var(--ink); background: #fffdf7; text-align: center; box-shadow: 7px 7px 0 var(--ink); }
+    .toast.show { display: block; animation: pop .25s ease-out; }
+    .toast strong { display: block; margin-bottom: 5px; font-size: 28px; letter-spacing: -.05em; }
+    @keyframes pop { from { opacity: 0; transform: translate(-50%, 10px); } to { opacity: 1; transform: translate(-50%, 0); } }
+    @media (max-width: 720px) {
+      .shell { padding: 18px 13px 25px; }
+      header { align-items: start; flex-direction: column; gap: 12px; }
+      .tagline { text-align: left; }
+      .statusbar { grid-template-columns: 1fr auto; gap: 8px; }
+      .round { grid-column: 1 / -1; grid-row: 2; justify-self: center; }
+      .base-stat.right { grid-column: 2; grid-row: 1; }
+      .health { width: 23vw; }
+      .controls { grid-template-columns: 1fr; gap: 13px; }
+      .unit-btn { flex-basis: 126px; }
+      .upgrade-deck { overflow-x: auto; }
+      .upgrade-btn { flex: 1 0 135px; }
+      .restart { width: 100%; }
+      .help { flex-direction: column; gap: 7px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <header>
+      <div><p class="eyebrow">Tiny tactical arena / 001</p><h1>ORBFRONT</h1></div>
+      <p class="tagline">Send a small blue army across the line. Break the red citadel before the wave breaks yours.</p>
+    </header>
+    <section class="game-frame">
+      <div class="statusbar">
+        <div class="base-stat"><i class="dot blue"></i><div class="base-info"><span>your base</span><div class="health"><span id="player-health"></span></div><div class="energy"><span class="energy-label">energy <b id="energy-count">90</b></span><div class="energy-track"><div class="energy-fill" id="energy-fill"></div></div></div></div></div>
+        <div class="round" id="round-label">WAVE 01</div>
+        <div class="base-stat right"><div class="health"><span id="enemy-health"></span></div><span>red base</span><i class="dot red"></i></div>
+      </div>
+      <canvas id="arena" aria-label="Orbfront battle arena"></canvas>
+      <div class="controls">
+        <div class="unit-deck">
+          <button class="unit-btn" data-unit="scout"><i class="unit-icon"></i><span>SCOUT<small>20 energy / swift</small></span></button>
+          <button class="unit-btn" data-unit="guard"><i class="unit-icon"></i><span>GUARD<small>35 energy / sturdy</small></span></button>
+          <button class="unit-btn" data-unit="striker"><i class="unit-icon"></i><span>STRIKER<small>55 energy / heavy hit</small></span></button>
+          <button class="unit-btn" data-unit="dasher"><i class="unit-icon"></i><span>DASHER<small>15 energy / very fast</small></span></button>
+          <button class="unit-btn" data-unit="titan"><i class="unit-icon"></i><span>TITAN<small>75 energy / colossal</small></span></button>
+        </div>
+        <div class="upgrade-deck">
+          <button class="upgrade-btn" id="economy-upgrade"><strong>+ income &amp; capacity <span id="economy-level">LV 0</span></strong><small id="economy-cost">80 energy</small></button>
+        </div>
+        <button class="restart" id="restart">↻ restart</button>
+      </div>
+    </section>
+    <div class="help"><span><b>Click a unit</b> to deploy it into the lane</span><span>Blue advances → &nbsp; Red advances ←</span></div>
+  </main>
+  <div class="toast" id="toast"><strong id="toast-title">VICTORY</strong><span id="toast-copy">The red base has fallen.</span></div>
+  <script>
+    const canvas = document.getElementById('arena');
+    const ctx = canvas.getContext('2d');
+    const energyCount = document.getElementById('energy-count');
+    const energyFill = document.getElementById('energy-fill');
+    const playerHealth = document.getElementById('player-health');
+    const enemyHealth = document.getElementById('enemy-health');
+    const roundLabel = document.getElementById('round-label');
+    const toast = document.getElementById('toast');
+    const unitData = {
+      scout: { cost: 20, radius: 13, speed: 45, hp: 42, damage: 8, cooldown: .64, color: '#287ee6' },
+      guard: { cost: 35, radius: 20, speed: 24, hp: 125, damage: 15, cooldown: 1.05, color: '#287ee6' },
+      striker: { cost: 55, radius: 16, speed: 31, hp: 72, damage: 38, cooldown: 1.45, color: '#287ee6' },
+      dasher: { cost: 15, radius: 10, speed: 70, hp: 28, damage: 5, cooldown: .4, color: '#287ee6' },
+      titan: { cost: 75, radius: 25, speed: 18, hp: 210, damage: 20, cooldown: 1.2, color: '#287ee6' }
+    };
+    let state;
+    let lastTime = performance.now();
+
+    function reset() {
+      state = { energy: 90, maxEnergy: 100, income: 4, economyLevel: 0, playerBase: 100, enemyBase: 100, units: [], enemies: [], sparks: [], wave: 1, over: false, spawnTimer: 1.6, incomeTimer: 0 };
+      toast.classList.remove('show');
+      updateHud();
+    }
+    function resize() {
+      const ratio = window.devicePixelRatio || 1;
+      canvas.width = canvas.clientWidth * ratio;
+      canvas.height = canvas.clientHeight * ratio;
+      ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+    }
+    function deploy(type) {
+      if (state.over || state.energy < unitData[type].cost) return;
+      const data = unitData[type];
+      state.energy -= data.cost;
+      state.units.push({ ...data, type, x: 78, y: canvas.clientHeight * (.48 + (Math.random() - .5) * .2), maxHp: data.hp, attackTimer: 0, wobble: Math.random() * 9 });
+      updateHud();
+    }
+    function spawnEnemy() {
+      const heavy = state.wave > 2 && Math.random() < .2;
+      const radius = heavy ? 23 : 15 + Math.random() * 4;
+      state.enemies.push({ x: canvas.clientWidth - 82, y: canvas.clientHeight * (.49 + (Math.random() - .5) * .23), radius, speed: heavy ? 15 : 22 + state.wave * 1.5, hp: heavy ? 140 + state.wave * 12 : 46 + state.wave * 7, maxHp: heavy ? 140 + state.wave * 12 : 46 + state.wave * 7, damage: heavy ? 22 : 10 + state.wave, attackTimer: 0, wobble: Math.random() * 9 });
+    }
+    function hitEffect(x, y, color) { for (let i = 0; i < 4; i++) state.sparks.push({ x, y, life: .32, vx: (Math.random() - .5) * 65, vy: (Math.random() - .5) * 65, color }); }
+    function distance(a, b) { return Math.abs(a.x - b.x); }
+    function update(dt) {
+      if (state.over) return;
+      state.incomeTimer += dt;
+      if (state.incomeTimer > .35) { state.energy = Math.min(state.maxEnergy, state.energy + state.income); state.incomeTimer = 0; }
+      state.spawnTimer -= dt;
+      if (state.spawnTimer <= 0) { spawnEnemy(); state.spawnTimer = Math.max(1.4, 4.5 - state.wave * .18) * (.75 + Math.random() * .35); }
+      for (const unit of state.units) {
+        const target = state.enemies.find(enemy => distance(unit, enemy) < unit.radius + enemy.radius + 5);
+        unit.attackTimer -= dt;
+        if (target) { if (unit.attackTimer <= 0) { target.hp -= unit.damage; unit.attackTimer = unit.cooldown; hitEffect(target.x, target.y, '#287ee6'); } }
+        else if (unit.x < canvas.clientWidth - 112) unit.x += unit.speed * dt;
+      }
+      for (const enemy of state.enemies) {
+        const target = state.units.find(unit => distance(enemy, unit) < enemy.radius + unit.radius + 5);
+        enemy.attackTimer -= dt;
+        if (target) { if (enemy.attackTimer <= 0) { target.hp -= enemy.damage; enemy.attackTimer = 1.05; hitEffect(target.x, target.y, '#eb554b'); } }
+        else if (enemy.x > 112) enemy.x -= enemy.speed * dt;
+      }
+      for (const unit of state.units) if (unit.x > canvas.clientWidth - 112) { state.enemyBase -= unit.damage * dt * .32; }
+      for (const enemy of state.enemies) if (enemy.x < 112) { state.playerBase -= enemy.damage * dt * .22; }
+      state.units = state.units.filter(unit => unit.hp > 0);
+      state.enemies = state.enemies.filter(enemy => enemy.hp > 0);
+      state.sparks = state.sparks.filter(spark => { spark.life -= dt; spark.x += spark.vx * dt; spark.y += spark.vy * dt; return spark.life > 0; });
+      state.wave = Math.max(1, Math.floor((100 - state.enemyBase) / 20) + 1);
+      if (state.enemyBase <= 0 || state.playerBase <= 0) endGame(state.enemyBase <= 0);
+      updateHud();
+    }
+    function endGame(won) { state.over = true; document.getElementById('toast-title').textContent = won ? 'VICTORY' : 'BASE LOST'; document.getElementById('toast-copy').textContent = won ? 'The red citadel has fallen.' : 'The red wave reached your line.'; toast.classList.add('show'); }
+    function upgradeEconomy() {
+      if (state.over) return;
+      const level = state.economyLevel;
+      const cost = Math.min(80 + level * 35, state.maxEnergy - 10);
+      if (state.energy < cost || level >= 5) return;
+      state.energy -= cost;
+      state.economyLevel++;
+      state.income++;
+      state.maxEnergy += 25;
+      updateHud();
+    }
+    function updateHud() { const economyCost = Math.min(80 + state.economyLevel * 35, state.maxEnergy - 10); energyCount.textContent = `${Math.floor(state.energy)} / ${state.maxEnergy}`; energyFill.style.width = `${Math.min(100, state.energy / state.maxEnergy * 100)}%`; playerHealth.style.width = `${Math.max(0, state.playerBase)}%`; enemyHealth.style.width = `${Math.max(0, state.enemyBase)}%`; roundLabel.textContent = `WAVE ${String(state.wave).padStart(2, '0')}`; document.querySelectorAll('.unit-btn').forEach(button => button.disabled = state.over || state.energy < unitData[button.dataset.unit].cost); document.getElementById('economy-level').textContent = `LV ${state.economyLevel}`; document.getElementById('economy-cost').textContent = state.economyLevel >= 5 ? 'MAXED' : `${economyCost} energy`; document.getElementById('economy-upgrade').disabled = state.over || state.energy < economyCost || state.economyLevel >= 5; }
+    function draw() {
+      const w = canvas.clientWidth, h = canvas.clientHeight;
+      ctx.clearRect(0, 0, w, h);
+      ctx.fillStyle = '#e8e5dc'; ctx.fillRect(0, 0, w, h);
+      ctx.strokeStyle = 'rgba(22,33,43,.10)'; ctx.lineWidth = 1;
+      for (let x = 0; x < w; x += 38) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke(); }
+      for (let y = 0; y < h; y += 38) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke(); }
+      ctx.fillStyle = 'rgba(245,189,77,.2)'; ctx.fillRect(w / 2 - 2, 0, 4, h);
+      drawBase(50, h / 2, '#287ee6', 'YOU'); drawBase(w - 50, h / 2, '#eb554b', 'RED');
+      [...state.units, ...state.enemies].forEach(drawOrb);
+      state.sparks.forEach(spark => { ctx.globalAlpha = Math.max(0, spark.life / .32); ctx.fillStyle = spark.color; ctx.beginPath(); ctx.arc(spark.x, spark.y, 2.5, 0, Math.PI * 2); ctx.fill(); ctx.globalAlpha = 1; });
+      ctx.fillStyle = 'rgba(22,33,43,.42)'; ctx.font = '10px DM Mono, monospace'; ctx.textAlign = 'center'; ctx.fillText('THE MIDLINE', w / 2, 19);
+    }
+    function drawBase(x, y, color, label) { ctx.fillStyle = color; ctx.beginPath(); ctx.arc(x, y, 34, 0, Math.PI * 2); ctx.fill(); ctx.strokeStyle = '#16212b'; ctx.lineWidth = 2; ctx.stroke(); ctx.fillStyle = '#fffdf7'; ctx.font = '600 10px Space Grotesk, sans-serif'; ctx.textAlign = 'center'; ctx.fillText(label, x, y + 4); }
+    function drawOrb(orb) { const pulse = Math.sin(performance.now() / 240 + orb.wobble) * 1.5; ctx.fillStyle = orb.color || '#eb554b'; ctx.beginPath(); ctx.arc(orb.x, orb.y, orb.radius + pulse, 0, Math.PI * 2); ctx.fill(); ctx.strokeStyle = '#16212b'; ctx.lineWidth = 2; ctx.stroke(); ctx.fillStyle = 'rgba(255,255,255,.6)'; ctx.beginPath(); ctx.arc(orb.x - orb.radius * .3, orb.y - orb.radius * .35, orb.radius * .18, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = '#16212b'; ctx.fillRect(orb.x - orb.radius, orb.y - orb.radius - 8, orb.radius * 2, 3); ctx.fillStyle = orb.color === '#287ee6' ? '#c8ed55' : '#fffdf7'; ctx.fillRect(orb.x - orb.radius, orb.y - orb.radius - 8, orb.radius * 2 * Math.max(0, orb.hp / orb.maxHp), 3); }
+    function loop(now) { const dt = Math.min(.05, (now - lastTime) / 1000); lastTime = now; update(dt); draw(); requestAnimationFrame(loop); }
+    document.querySelectorAll('.unit-btn').forEach(button => button.addEventListener('click', () => deploy(button.dataset.unit)));
+    document.getElementById('economy-upgrade').addEventListener('click', upgradeEconomy);
+    document.getElementById('restart').addEventListener('click', reset);
+    window.addEventListener('resize', resize);
+    reset(); resize(); requestAnimationFrame(loop);
+  </script>
+</body>
+</html>
