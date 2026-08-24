@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Orbit Wardens</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main class="shell">
+    <header class="topbar">
+      <div class="brand"><span class="brand-mark"></span><span>ORBIT WARDENS</span></div>
+      <div class="status"><span class="status-dot"></span>SECTOR 07 · LIVE</div>
+    </header>
+
+    <section class="game-layout">
+      <aside class="intro-panel">
+        <p class="eyebrow">TACTICAL DEFENSE / 01</p>
+        <h1>Hold the<br><em>orbit.</em></h1>
+        <p class="lede">Deploy radial sentries, protect the core, and keep the incoming swarm outside the ring.</p>
+        <div class="legend">
+          <div><span class="legend-dot tower-dot"></span><span>SENTRY</span><b>click to deploy</b></div>
+          <div><span class="legend-dot enemy-dot"></span><span>DRIFTER</span><b>intercept on path</b></div>
+        </div>
+      </aside>
+
+      <section class="arena-wrap">
+        <div class="arena-head"><span id="wave-label">WAVE 01</span><span id="wave-status">INCOMING</span></div>
+        <div class="canvas-frame">
+          <canvas id="game-canvas" aria-label="Orbit Wardens tower defense arena"></canvas>
+          <div class="canvas-hint" id="canvas-hint">1 SENTRY - CLICK THE FIELD TO DEPLOY</div>
+        </div>
+        <div class="arena-foot"><span><i class="key">1-4</i> select tower</span><span><i class="key">SPACE</i> launch wave</span><span><i class="key">R</i> restart</span></div>
+      </section>
+
+      <aside class="control-panel">
+        <div class="resource"><span>CORE INTEGRITY</span><strong id="health-value">100</strong><div class="meter"><span id="health-meter"></span></div></div>
+        <div class="stats"><div><span>CREDITS</span><strong id="money-value">100</strong></div><div><span id="tower-cost-label">SENTRY COST</span><strong id="tower-cost-value">050</strong></div></div>
+        <div class="stats compact-stats"><div><span>WAVE</span><strong id="wave-value">01</strong></div><div><span>SCORE</span><strong id="score-value">0000</strong></div></div>
+        <div class="command-block"><p class="eyebrow">SELECT TOWER</p><div class="tower-picker"><button class="tower-option selected" data-tower="sentry"><i>1</i><span>SENTRY</span></button><button class="tower-option" data-tower="freezer"><i>2</i><span>FREEZER</span></button><button class="tower-option" data-tower="supporter"><i>3</i><span>SUPPORTER</span></button><button class="tower-option" data-tower="nuker"><i>4</i><span>NUKER</span></button><button class="tower-option" data-tower="sniper"><i>5</i><span>SNIPER</span></button><button class="tower-option" data-tower="rapid"><i>6</i><span>RAPID</span></button><button class="tower-option" data-tower="blocker"><i>7</i><span>BLOCKER</span></button><button class="tower-option" data-tower="artillery"><i>8</i><span>ARTILLERY</span></button></div><div class="tower-stats"><p class="eyebrow">TOWER SPECS</p><div class="tower-stat-row"><b><span class="stat-swatch sentry-swatch"></span>SENTRY</b><span>DMG 1 · RNG 145 · RATE 0.62s</span></div><div class="tower-stat-row"><b><span class="stat-swatch freezer-swatch"></span>FREEZER</b><span>DMG 1 · RNG 125 · SLOW 65%</span></div><div class="tower-stat-row"><b><span class="stat-swatch supporter-swatch"></span>SUPPORTER</b><span>RNG 95 · BOOST 15% · CAP 75%</span></div><div class="tower-stat-row"><b><span class="stat-swatch nuker-swatch"></span>NUKER</b><span>DMG 3 · RNG 180 · AOE 38</span></div><div class="tower-stat-row"><b><span class="stat-swatch sniper-swatch"></span>SNIPER</b><span>DMG 5 · RNG 240 · RATE 1.8s</span></div><div class="tower-stat-row"><b><span class="stat-swatch rapid-swatch"></span>RAPID</b><span>DMG 1 · RNG 120 · RATE 0.22s</span></div><div class="tower-stat-row"><b><span class="stat-swatch blocker-swatch"></span>BLOCKER</b><span>DMG 0 · RNG 140 · WALL 3s</span></div><div class="tower-stat-row"><b><span class="stat-swatch artillery-swatch"></span>ARTILLERY</b><span>DMG 4 · RNG 260 · AOE 55</span></div></div><p class="deploy-status" id="deploy-status">SENTRY READY · 50 CREDITS</p><button id="wave-button" class="primary-button"><span>LAUNCH WAVE</span><span>↗</span></button><button id="restart-button" class="text-button">RESET SECTOR <span>↻</span></button></div>
+        <div class="feed"><p class="eyebrow">FIELD LOG</p><div id="log-lines"><p><span>00:00</span> Systems online.</p><p><span>00:01</span> Core shield stable.</p></div></div>
+      </aside>
+    </section>
+    <footer><span>ORBITAL DEFENSE NETWORK</span><span>v.1.0.7</span></footer>
+  </main>
+  <script src="game.js?v=4"></script>
+</body>
+</html>
