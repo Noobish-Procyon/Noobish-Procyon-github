@@ -22,4 +22,5 @@ footer { justify-content: space-between; padding-top: 18px; border-top: 1px soli
 .artillery-swatch { background: #9aa3a8; box-shadow: 0 0 0 2px #a56cff; }
 .tower-stats .tower-stat-row:nth-of-type(4) > span::after { content: " · RATE 2.4s"; }
 .tower-stats .tower-stat-row:nth-of-type(8) > span::after { content: " · RATE 3.2s"; }
+.tower-stats .tower-stat-row:nth-of-type(3) > span::after { content: " · RANGE +10% · CAP +50%"; }
 .blocker-swatch { background: #f58eb7; }
