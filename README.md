@@ -1,4 +1,3 @@
-Fusion lab is currently in alpha.
+Shape Summoner and clean up.io are free to play without any WIP or extra unexpected updates
 
-Feel free to play this along with my other games
-Shape summoner legacy won't be updated as its meant to be legacy and it has no bugs.
+OTHERS ARE WIP
