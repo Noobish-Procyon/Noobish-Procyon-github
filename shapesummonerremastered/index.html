@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Orbitfall // Hold the Line</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Space+Grotesk:wght@400;500;600;700&display=swap');
+    :root { --ink:#e9f1ed; --muted:#8d9d97; --lime:#d6ff58; --cyan:#71e8dc; --coral:#ff796b; --panel:rgba(13,22,27,.84); --line:rgba(186,220,207,.19); }
+    * { box-sizing:border-box; }
+    html, body { margin:0; width:100%; height:100%; overflow:hidden; background:#081115; color:var(--ink); font-family:'Space Grotesk', sans-serif; }
+    body { cursor:crosshair; }
+    canvas { display:block; width:100vw; height:100vh; }
+    .hud { position:fixed; inset:0; pointer-events:none; padding:24px 28px; display:flex; flex-direction:column; justify-content:space-between; }
+    .topbar { display:flex; align-items:flex-start; justify-content:space-between; }
+    .brand { letter-spacing:.15em; font-size:12px; font-weight:700; color:var(--lime); text-transform:uppercase; }
+    .brand span { color:var(--muted); font-weight:400; }
+    .stats { display:flex; gap:10px; }
+    .stat { min-width:94px; padding:9px 12px 10px; border:1px solid var(--line); background:rgba(7,15,18,.6); }
+    .stat label, .meter label { display:block; color:var(--muted); text-transform:uppercase; letter-spacing:.13em; font:10px 'DM Mono', monospace; }
+    .stat strong { display:block; margin-top:3px; font:500 18px 'DM Mono', monospace; }
+    .bottom { display:flex; align-items:end; justify-content:space-between; }
+    .meters { display:flex; gap:24px; width:min(490px, 54vw); }
+    .meter { flex:1; }
+    .meter-head { display:flex; justify-content:space-between; margin-bottom:6px; font:11px 'DM Mono', monospace; color:var(--muted); }
+    .track { height:7px; background:rgba(255,255,255,.1); overflow:hidden; }
+    .fill { height:100%; transition:width .2s ease; }
+    #hp-fill { background:var(--coral); } #energy-fill { background:var(--cyan); }
+    .help { text-align:right; color:var(--muted); font:11px 'DM Mono', monospace; line-height:1.7; }
+    kbd { color:var(--ink); border:1px solid var(--line); padding:2px 5px; background:rgba(255,255,255,.05); }
+    .screen { position:fixed; inset:0; display:grid; place-items:center; background:radial-gradient(ellipse at 50% 50%, rgba(20,48,48,.25), rgba(4,10,12,.86) 70%); transition:opacity .35s ease; }
+    .screen.hidden { opacity:0; pointer-events:none; }
+    .panel { width:min(590px, calc(100vw - 40px)); border:1px solid rgba(214,255,88,.38); background:var(--panel); padding:40px 44px; box-shadow:0 20px 90px rgba(0,0,0,.4); }
+    .eyebrow { color:var(--lime); font:11px 'DM Mono', monospace; letter-spacing:.18em; text-transform:uppercase; }
+    h1 { margin:11px 0 14px; font-size:clamp(44px, 7vw, 78px); letter-spacing:-.07em; line-height:.9; max-width:480px; }
+    h1 em { color:var(--lime); font-style:normal; }
+    .intro { max-width:430px; margin:0 0 26px; color:#abbab4; line-height:1.55; font-size:15px; }
+    .rules { display:grid; grid-template-columns:1fr 1fr; gap:9px; margin-bottom:28px; }
+    .rule { border-top:1px solid var(--line); padding-top:9px; color:var(--muted); font:11px 'DM Mono', monospace; line-height:1.5; }
+    .rule b { color:var(--ink); font-weight:500; }
+    button { border:0; color:#071013; background:var(--lime); font:700 12px 'DM Mono', monospace; text-transform:uppercase; letter-spacing:.12em; padding:14px 19px; cursor:pointer; }
+    button:hover { background:#e5ff91; transform:translateY(-1px); }
+    .choices { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-top:24px; }
+    .choices button { text-align:left; min-height:115px; padding:14px; color:var(--ink); background:rgba(255,255,255,.07); border:1px solid var(--line); }
+    .choices button:hover { border-color:var(--lime); background:rgba(214,255,88,.1); }
+    .choices b { display:block; color:var(--lime); margin-bottom:9px; font:500 13px 'DM Mono', monospace; }
+    .choices span { display:block; color:#aab9b2; font:11px 'DM Mono', monospace; line-height:1.45; }
+    #message { margin-top:13px; color:var(--muted); font:11px 'DM Mono', monospace; }
+    #continue-btn { display:none; margin-left:8px; color:var(--ink); background:rgba(255,255,255,.1); border:1px solid var(--line); }
+    #continue-btn:hover { background:rgba(113,232,220,.15); border-color:var(--cyan); }
+    @media (max-width:600px) { .hud{padding:17px 16px 18px} .stats{gap:5px} .stat{min-width:70px;padding:7px 8px}.stat strong{font-size:15px}.brand{font-size:10px}.meters{width:100%;gap:13px}.bottom{gap:12px;flex-direction:column;align-items:stretch}.help{text-align:left}.panel{padding:28px 25px}.choices{grid-template-columns:1fr}.choices button{min-height:auto} }
+  </style>
+</head>
+<body>
+  <canvas id="game"></canvas>
+  <div class="hud">
+    <div class="topbar"><div class="brand">ORBITFALL <span>// SECTOR 07</span></div><div class="stats"><div class="stat"><label>Wave</label><strong id="wave">01</strong></div><div class="stat"><label>Score</label><strong id="score">00000</strong></div><div class="stat"><label>Threats</label><strong id="threats">00</strong></div></div></div>
+    <div class="bottom"><div class="meters"><div class="meter"><div class="meter-head"><label>Integrity</label><span id="hp-text">100 / 100</span></div><div class="track"><div class="fill" id="hp-fill" style="width:100%"></div></div></div><div class="meter"><div class="meter-head"><label>Barrier charge</label><span id="energy-text">100 / 100</span></div><div class="track"><div class="fill" id="energy-fill" style="width:100%"></div></div></div></div><div class="help"><kbd>WASD</kbd> move &nbsp; <kbd>SPACE</kbd> fire &nbsp; <kbd>CLICK</kbd> summon barrier</div></div>
+  </div>
+  <div class="screen" id="start-screen"><div class="panel"><div class="eyebrow">A small arena survival // v.1.0</div><h1>Hold the <em>line.</em></h1><p class="intro">You are the last stable orbit. Survive escalating waves, collect shards, and shape the battlefield before it shapes you.</p><div class="rules"><div class="rule"><b>01 / FIRE</b><br>Face the cursor and hold space to fire.</div><div class="rule"><b>02 / DEFEND</b><br>Click anywhere to summon a temporary wall.</div></div><button id="start-btn">Enter the orbit</button><button id="continue-btn">Continue saved run</button><div id="message">Best played with sound off and a little room to breathe.</div></div></div>
+  <div class="screen hidden" id="upgrade-screen"><div class="panel"><div class="eyebrow">Wave cleared // choose one mutation</div><h1 id="upgrade-title">A new edge.</h1><p class="intro">The arena is quiet for a moment. Spend it well.</p><div class="choices" id="choices"></div></div></div>
+  <div class="screen hidden" id="gameover-screen"><div class="panel"><div class="eyebrow">Signal lost // run complete</div><h1>Orbit <em>collapsed.</em></h1><p class="intro" id="final-score">You held the line.</p><button id="restart-btn">Re-enter the orbit</button></div></div>
+  <script>
+    const canvas = document.getElementById('game'), ctx = canvas.getContext('2d');
+    const SAVE_KEY = 'orbitfall-run-v1';
+    let W, H, dpr, last = 0, running = false, paused = false, wave = 1, score = 0, spawnLeft = 0, spawnTimer = 0, nextWave = false, saveTimer = 0;
+    const keys = {}, mouse = { x: innerWidth / 2, y: innerHeight / 2, down: false };
+    let player, bullets = [], enemies = [], barriers = [], shards = [], particles = [];
+    const upgrades = [
+      ['HOT CORE','Shots deal 45% more damage.'], ['SWIFT ORBIT','Movement speed increased by 30%.'], ['DEEP RESERVE','Barrier capacity increased by 35.'], ['RAPID PULSE','Fire rate increased by 25%.'], ['REPAIR PROTOCOL','Restore 28 integrity now.'], ['MAGNETIC FIELD','Shards drift toward you from farther away.']
+    ];
+    function resize(){ dpr=Math.min(devicePixelRatio||1,2); W=innerWidth; H=innerHeight; canvas.width=W*dpr; canvas.height=H*dpr; ctx.setTransform(dpr,0,0,dpr,0,0); }
+    function reset(){ wave=1; score=0; bullets=[]; enemies=[]; barriers=[]; shards=[]; particles=[]; spawnLeft=8; spawnTimer=0; nextWave=false; saveTimer=0; player={x:W/2,y:H/2,r:15,hp:100,maxHp:100,energy:100,maxEnergy:100,speed:260,damage:24,fireRate:0.16,cool:0,magnet:100}; try{localStorage.removeItem(SAVE_KEY)}catch(error){} }
+    function start(){ reset(); beginRun(); }
+    function beginRun(){ running=true; paused=false; document.getElementById('start-screen').classList.add('hidden'); document.getElementById('gameover-screen').classList.add('hidden'); last=performance.now(); requestAnimationFrame(loop); }
+    function saveRun(){ if(!running||!player)return; try{localStorage.setItem(SAVE_KEY,JSON.stringify({version:1,wave,score,spawnLeft,spawnTimer,nextWave,player,bullets,enemies,barriers,shards,savedAt:Date.now()}));}catch(error){} }
+    function loadRun(){ try{const saved=JSON.parse(localStorage.getItem(SAVE_KEY));if(!saved||saved.version!==1||!saved.player)return false;wave=saved.wave;score=saved.score;spawnLeft=saved.spawnLeft;spawnTimer=saved.spawnTimer;nextWave=false;saveTimer=0;player=saved.player;bullets=saved.bullets||[];enemies=saved.enemies||[];barriers=saved.barriers||[];shards=saved.shards||[];particles=[];return true;}catch(error){return false;} }
+    function continueRun(){ if(loadRun()){beginRun();} }
+    function show(id){ document.getElementById(id).classList.remove('hidden'); }
+    function hide(id){ document.getElementById(id).classList.add('hidden'); }
+    function rand(a,b){ return a+Math.random()*(b-a); }
+    function edgePoint(){ const side=Math.floor(Math.random()*4); return side===0?{x:rand(0,W),y:-35}:side===1?{x:W+35,y:rand(0,H)}:side===2?{x:rand(0,W),y:H+35}:{x:-35,y:rand(0,H)}; }
+    function spawn(){ const p=edgePoint(), elite=Math.random()<Math.min(.08+wave*.018,.28); enemies.push({x:p.x,y:p.y,r:elite?18:11, hp:(elite?105:38)+wave*8, max:(elite?105:38)+wave*8, speed:(elite?43:58)+wave*3, elite, hit:0}); }
+    function burst(x,y,color,count=8){ for(let i=0;i<count;i++) particles.push({x,y,vx:rand(-100,100),vy:rand(-100,100),life:rand(.3,.7),max:.7,color}); }
+    function shoot(){ const angle=Math.atan2(mouse.y-player.y,mouse.x-player.x); bullets.push({x:player.x+Math.cos(angle)*18,y:player.y+Math.sin(angle)*18,vx:Math.cos(angle)*640,vy:Math.sin(angle)*640,r:4,damage:player.damage,life:1.2}); player.cool=player.fireRate; burst(player.x+Math.cos(angle)*18,player.y+Math.sin(angle)*18,'#d6ff58',2); }
+    function addBarrier(x,y){ if(player.energy<24)return; const angle=Math.atan2(y-player.y,x-player.x); barriers.push({x,y,angle,r:54,life:5,max:5}); player.energy-=24; burst(x,y,'#71e8dc',14); }
+    function update(dt){
+      const dx=(keys.s||keys.ArrowDown?1:0)-(keys.w||keys.ArrowUp?1:0), dy=(keys.d||keys.ArrowRight?1:0)-(keys.a||keys.ArrowLeft?1:0); const len=Math.hypot(dx,dy)||1;
+      player.x=Math.max(25,Math.min(W-25,player.x+dy*player.speed*dt/len)); player.y=Math.max(25,Math.min(H-25,player.y+dx*player.speed*dt/len));
+      player.energy=Math.min(player.maxEnergy,player.energy+10*dt); player.cool-=dt; if(keys[' ']&&player.cool<=0)shoot();
+      saveTimer-=dt; if(saveTimer<=0){saveTimer=2;saveRun();} spawnTimer-=dt; if(spawnLeft>0&&spawnTimer<=0){ spawnLeft--; spawnTimer=Math.max(.22,.7-wave*.025); spawn(); } else if(spawnLeft===0&&enemies.length===0&&!nextWave){ nextWave=true; setTimeout(()=>{ if(running){ wave++; spawnLeft=6+wave*3; spawnTimer=0; nextWave=false; saveRun(); showUpgrade(); } },700); }
+      bullets.forEach(b=>{b.x+=b.vx*dt;b.y+=b.vy*dt;b.life-=dt}); bullets=bullets.filter(b=>b.life>0&&b.x>-20&&b.x<W+20&&b.y>-20&&b.y<H+20);
+      barriers.forEach(b=>b.life-=dt); barriers=barriers.filter(b=>b.life>0);
+      enemies.forEach(e=>{ const a=Math.atan2(player.y-e.y,player.x-e.x), dist=Math.hypot(player.x-e.x,player.y-e.y); let blocked=false; barriers.forEach(b=>{if(Math.hypot(e.x-b.x,e.y-b.y)<b.r+e.r){blocked=true;b.life-=dt*.4;}}); if(!blocked){e.x+=Math.cos(a)*e.speed*dt;e.y+=Math.sin(a)*e.speed*dt;} e.hit-=dt; if(dist<player.r+e.r){player.hp-= (e.elite?18:10)*dt; burst(player.x,player.y,'#ff796b',1);}});
+      bullets.forEach(b=>enemies.forEach(e=>{if(Math.hypot(b.x-e.x,b.y-e.y)<b.r+e.r){e.hp-=b.damage;b.life=0;e.hit=.08;burst(b.x,b.y,'#d6ff58',3);}}));
+      enemies=enemies.filter(e=>{if(e.hp<=0){score+=e.elite?250:100; shards.push({x:e.x,y:e.y,r:5});burst(e.x,e.y,e.elite?'#ff796b':'#71e8dc',e.elite?18:8);return false}return true});
+      shards.forEach(s=>{const dist=Math.hypot(player.x-s.x,player.y-s.y);if(dist<player.magnet){s.x+=(player.x-s.x)*dt*3;s.y+=(player.y-s.y)*dt*3;}if(dist<player.r+s.r){score+=25;player.energy=Math.min(player.maxEnergy,player.energy+8);s.dead=true;burst(s.x,s.y,'#71e8dc',4);}});shards=shards.filter(s=>!s.dead);
+      particles.forEach(p=>{p.x+=p.vx*dt;p.y+=p.vy*dt;p.life-=dt});particles=particles.filter(p=>p.life>0);
+      if(player.hp<=0){running=false;try{localStorage.removeItem(SAVE_KEY)}catch(error){} document.getElementById('final-score').textContent=`Final score ${String(score).padStart(5,'0')} // Reached wave ${String(wave).padStart(2,'0')}.`;show('gameover-screen');} hud();
+    }
+    function showUpgrade(){ paused=true; const box=document.getElementById('choices');box.innerHTML=''; [...upgrades].sort(()=>Math.random()-.5).slice(0,3).forEach(u=>{const b=document.createElement('button');b.innerHTML=`<b>${u[0]}</b><span>${u[1]}</span>`;b.onclick=()=>{applyUpgrade(u[0]);hide('upgrade-screen');paused=false;};box.appendChild(b)});document.getElementById('upgrade-title').textContent=`Wave ${String(wave-1).padStart(2,'0')} survived.`;show('upgrade-screen');}
+    function applyUpgrade(name){if(name==='HOT CORE')player.damage*=1.45;if(name==='SWIFT ORBIT')player.speed*=1.3;if(name==='DEEP RESERVE'){player.maxEnergy+=35;player.energy=player.maxEnergy;}if(name==='RAPID PULSE')player.fireRate*=.75;if(name==='REPAIR PROTOCOL')player.hp=Math.min(player.maxHp,player.hp+28);if(name==='MAGNETIC FIELD')player.magnet=210;}
+    function draw(){
+      ctx.fillStyle='#081115';ctx.fillRect(0,0,W,H); ctx.strokeStyle='rgba(113,232,220,.055)';ctx.lineWidth=1;const grid=48;for(let x=0;x<W;x+=grid){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke()}for(let y=0;y<H;y+=grid){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke()}
+      ctx.strokeStyle='rgba(214,255,88,.09)';ctx.beginPath();ctx.arc(W/2,H/2,Math.min(W,H)*.31,0,Math.PI*2);ctx.stroke();
+      shards.forEach(s=>{ctx.fillStyle='#71e8dc';ctx.shadowBlur=14;ctx.shadowColor='#71e8dc';ctx.beginPath();ctx.arc(s.x,s.y,s.r,0,Math.PI*2);ctx.fill();ctx.shadowBlur=0});
+      barriers.forEach(b=>{ctx.save();ctx.translate(b.x,b.y);ctx.rotate(b.angle);ctx.strokeStyle=`rgba(113,232,220,${.3+.7*b.life/b.max})`;ctx.lineWidth=5;ctx.shadowBlur=16;ctx.shadowColor='#71e8dc';ctx.beginPath();ctx.arc(0,0,b.r,-.65,.65);ctx.stroke();ctx.restore()});
+      bullets.forEach(b=>{ctx.fillStyle='#d6ff58';ctx.shadowBlur=12;ctx.shadowColor='#d6ff58';ctx.beginPath();ctx.arc(b.x,b.y,b.r,0,Math.PI*2);ctx.fill();ctx.shadowBlur=0});
+      enemies.forEach(e=>{ctx.fillStyle=e.elite?'#ff796b':'#c94e58';ctx.globalAlpha=e.hit>0?1:.86;ctx.beginPath();ctx.arc(e.x,e.y,e.r,0,Math.PI*2);ctx.fill();ctx.globalAlpha=1;ctx.strokeStyle='rgba(255,255,255,.45)';ctx.lineWidth=2;ctx.beginPath();ctx.arc(e.x,e.y,e.r+4,-Math.PI/2,-Math.PI/2+Math.PI*2*(e.hp/e.max));ctx.stroke()});
+      if(player){const angle=Math.atan2(mouse.y-player.y,mouse.x-player.x);ctx.save();ctx.translate(player.x,player.y);ctx.rotate(angle);ctx.fillStyle='#d6ff58';ctx.shadowBlur=24;ctx.shadowColor='#d6ff58';ctx.beginPath();ctx.arc(0,0,player.r,0,Math.PI*2);ctx.fill();ctx.fillStyle='#081115';ctx.beginPath();ctx.moveTo(7,-4);ctx.lineTo(22,0);ctx.lineTo(7,4);ctx.fill();ctx.restore();ctx.strokeStyle='rgba(214,255,88,.25)';ctx.lineWidth=1;ctx.beginPath();ctx.arc(player.x,player.y,player.r+9,0,Math.PI*2);ctx.stroke()}
+      particles.forEach(p=>{ctx.globalAlpha=Math.max(0,p.life/p.max);ctx.fillStyle=p.color;ctx.fillRect(p.x,p.y,3,3)});ctx.globalAlpha=1;
+    }
+    function hud(){document.getElementById('wave').textContent=String(wave).padStart(2,'0');document.getElementById('score').textContent=String(score).padStart(5,'0');document.getElementById('threats').textContent=String(enemies.length).padStart(2,'0');document.getElementById('hp-text').textContent=`${Math.ceil(player.hp)} / ${player.maxHp}`;document.getElementById('energy-text').textContent=`${Math.floor(player.energy)} / ${player.maxEnergy}`;document.getElementById('hp-fill').style.width=`${Math.max(0,player.hp/player.maxHp*100)}%`;document.getElementById('energy-fill').style.width=`${player.energy/player.maxEnergy*100}%`;}
+    function loop(now){if(!running)return;const dt=Math.min((now-last)/1000,.033);last=now;if(!paused)update(dt);draw();requestAnimationFrame(loop)}
+    addEventListener('resize',resize); addEventListener('pagehide',saveRun); addEventListener('keydown',e=>{keys[e.key]=true;if([' ','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key))e.preventDefault();if(e.key==='p'&&running){paused=!paused;saveRun()}});addEventListener('keyup',e=>keys[e.key]=false);addEventListener('mousemove',e=>{mouse.x=e.clientX;mouse.y=e.clientY});canvas.addEventListener('click',e=>{if(running&&!paused)addBarrier(e.clientX,e.clientY)});document.getElementById('start-btn').onclick=start;document.getElementById('continue-btn').onclick=continueRun;document.getElementById('restart-btn').onclick=start;try{if(localStorage.getItem(SAVE_KEY)){document.getElementById('continue-btn').style.display='inline-block';}}catch(error){} resize();
+  </script>
+</body>
+</html>
