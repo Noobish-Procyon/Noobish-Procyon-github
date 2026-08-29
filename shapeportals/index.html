@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Shape Portal Maze</title>
+<style>
+    html, body {
+        margin: 0;
+        padding: 0;
+        background: #111;
+        overflow: hidden;
+    }
+    canvas {
+        display: block;
+        background: #111;
+    }
+</style>
+</head>
+<body>
+<canvas id="game"></canvas>
+
+<script>
+// =========================
+// Canvas Setup
+// =========================
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+function resize() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+}
+resize();
+window.onresize = resize;
+
+// =========================
+// Player
+// =========================
+const player = {
+    x: 100,
+    y: 100,
+    r: 15,
+    speed: 3,
+    color: "#4af",
+    vx: 0,
+    vy: 0
+};
+
+// =========================
+// Controls
+// =========================
+const keys = {};
+window.onkeydown = e => keys[e.key] = true;
+window.onkeyup = e => keys[e.key] = false;
+
+// =========================
+// Maze Rooms
+// =========================
+// Each room has:
+// - walls
+// - portals
+// - entry point
+// - name
+
+const rooms = {
+    "start": {
+        name: "start",
+        entry: {x: 150, y: 150},
+        walls: [
+            {x: 50, y: 50, w: 600, h: 20},
+            {x: 50, y: 50, w: 20, h: 400},
+            {x: 50, y: 430, w: 600, h: 20},
+            {x: 630, y: 50, w: 20, h: 400}
+        ],
+        portals: [
+            {x: 350, y: 240, r: 25, color: "#f55", target: "loop1"}
+        ]
+    },
+
+    "loop1": {
+        name: "loop1",
+        entry: {x: 200, y: 200},
+        walls: [
+            {x: 100, y: 100, w: 400, h: 20},
+            {x: 100, y: 100, w: 20, h: 300},
+            {x: 100, y: 380, w: 400, h: 20},
+            {x: 480, y: 100, w: 20, h: 300}
+        ],
+        portals: [
+            {x: 300, y: 240, r: 25, color: "#f55", target: "loop2"},
+            {x: 450, y: 240, r: 25, color: "#5f5", target: "start"} // exit loop
+        ]
+    },
+
+    "loop2": {
+        name: "loop2",
+        entry: {x: 200, y: 200},
+        walls: [
+            {x: 100, y: 100, w: 400, h: 20},
+            {x: 100, y: 100, w: 20, h: 300},
+            {x: 100, y: 380, w: 400, h: 20},
+            {x: 480, y: 100, w: 20, h: 300}
+        ],
+        portals: [
+            {x: 300, y: 240, r: 25, color: "#f55", target: "loop1"},
+            {x: 450, y: 240, r: 25, color: "#5f5", target: "station"} // exit loop
+        ]
+    },
+
+    "station": {
+        name: "station",
+        entry: {x: 200, y: 200},
+        walls: [
+            {x: 80, y: 80, w: 500, h: 20},
+            {x: 80, y: 80, w: 20, h: 350},
+            {x: 80, y: 410, w: 500, h: 20},
+            {x: 560, y: 80, w: 20, h: 350}
+        ],
+        portals: [
+            {x: 320, y: 240, r: 25, color: "#55f", target: "time"}
+        ]
+    },
+
+    "time": {
+        name: "time",
+        entry: {x: 200, y: 200},
+        walls: [
+            {x: 120, y: 120, w: 400, h: 20},
+            {x: 120, y: 120, w: 20, h: 300},
+            {x: 120, y: 400, w: 400, h: 20},
+            {x: 500, y: 120, w: 20, h: 300}
+        ],
+        portals: [
+            {x: 310, y: 240, r: 25, color: "#ff0", target: "end"}
+        ]
+    },
+
+    "end": {
+        name: "end",
+        entry: {x: 300, y: 300},
+        walls: [],
+        portals: []
+    }
+};
+
+let currentRoom = rooms["start"];
+
+// =========================
+// Collision
+// =========================
+function collideWalls(px, py, r, walls) {
+    for (let w of walls) {
+        if (px + r > w.x && px - r < w.x + w.w &&
+            py + r > w.y && py - r < w.y + w.h) {
+            return true;
+        }
+    }
+    return false;
+}
+
+// =========================
+// Portal Check
+// =========================
+function checkPortals() {
+    for (let p of currentRoom.portals) {
+        const dx = player.x - p.x;
+        const dy = player.y - p.y;
+        if (Math.sqrt(dx*dx + dy*dy) < p.r + player.r) {
+            currentRoom = rooms[p.target];
+            player.x = currentRoom.entry.x;
+            player.y = currentRoom.entry.y;
+        }
+    }
+}
+
+// =========================
+// Update
+// =========================
+function update() {
+    player.vx = (keys["ArrowRight"] || keys["d"] ? 1 : 0) -
+                (keys["ArrowLeft"]  || keys["a"] ? 1 : 0);
+    player.vy = (keys["ArrowDown"]  || keys["s"] ? 1 : 0) -
+                (keys["ArrowUp"]    || keys["w"] ? 1 : 0);
+
+    let nx = player.x + player.vx * player.speed;
+    let ny = player.y + player.vy * player.speed;
+
+    if (!collideWalls(nx, player.y, player.r, currentRoom.walls)) player.x = nx;
+    if (!collideWalls(player.x, ny, player.r, currentRoom.walls)) player.y = ny;
+
+    checkPortals();
+}
+
+// =========================
+// Draw
+// =========================
+function draw() {
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+
+    // Draw walls
+    ctx.fillStyle = "#333";
+    for (let w of currentRoom.walls) {
+        ctx.fillRect(w.x, w.y, w.w, w.h);
+    }
+
+    // Draw portals
+    for (let p of currentRoom.portals) {
+        ctx.beginPath();
+        ctx.strokeStyle = p.color;
+        ctx.lineWidth = 4;
+        ctx.arc(p.x, p.y, p.r, 0, Math.PI*2);
+        ctx.stroke();
+
+        // Glow
+        ctx.beginPath();
+        ctx.strokeStyle = p.color + "55";
+        ctx.lineWidth = 10;
+        ctx.arc(p.x, p.y, p.r + 8, 0, Math.PI*2);
+        ctx.stroke();
+    }
+
+    // Draw player
+    ctx.beginPath();
+    ctx.fillStyle = player.color;
+    ctx.arc(player.x, player.y, player.r, 0, Math.PI*2);
+    ctx.fill();
+
+    // End screen
+    if (currentRoom.name === "end") {
+        ctx.fillStyle = "#fff";
+        ctx.font = "40px Arial";
+        ctx.fillText("You escaped the Shape Portal Maze!", 100, 200);
+    }
+}
+
+// =========================
+// Game Loop
+// =========================
+function loop() {
+    update();
+    draw();
+    requestAnimationFrame(loop);
+}
+loop();
+
+</script>
+</body>
+</html>
