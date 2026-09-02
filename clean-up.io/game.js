@@ -224,7 +224,7 @@ const upgrades = {
     },
 
     doublePoints: { 
-        cost: 20, 
+        cost: 30, 
         apply: () => {
             if (scoreMultiplierLevel < scoreMultiplierMax) {
                 scoreMultiplierLevel++;
@@ -234,7 +234,7 @@ const upgrades = {
     },
 
     autoCollector: { 
-        cost: 30, 
+        cost: 40, 
         apply: () => {
             if (autoCollectorLevel < autoCollectorMax) {
                 autoCollectorLevel++;
