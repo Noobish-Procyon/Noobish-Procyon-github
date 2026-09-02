@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HyperFighters</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="gameContainer">
+        <canvas id="gameCanvas"></canvas>
+        
+        <!-- UI Overlay -->
+        <div id="uiOverlay">
+            <div class="stats">
+                <div class="stat-item">
+                    <label>Score:</label>
+                    <span id="score">0</span>
+                </div>
+                <div class="stat-item">
+                    <label>Wave:</label>
+                    <span id="wave">1</span>
+                </div>
+                <div class="stat-item">
+                    <label>Enemies:</label>
+                    <span id="enemyCount">0</span>
+                </div>
+                <div class="stat-item">
+                    <label>Health:</label>
+                    <span id="health">100</span>
+                </div>
+            </div>
+            <div class="controls">
+                <button id="pauseBtn" type="button" onclick="game.togglePause()" aria-label="Pause game">II</button>
+                <p class="move-guide">MOVE: WASD / ARROWS</p>
+                <p class="ability-guide">Q NOVA | E SHIELD | SHIFT DASH | V TRANSFORM | Z LASER | X MOVE | C PROJECTILE | II UPGRADES</p>
+                <div class="ability-hud" aria-live="polite">
+                    <span id="novaStatus">Q NOVA READY</span>
+                    <span id="shieldStatus">E SHIELD READY</span>
+                    <span id="dashStatus">SHIFT DASH READY</span>
+                    <span id="transformStatus">V TRANSFORM READY</span>
+                    <span id="laserStatus">Z LASER READY</span>
+                    <span id="xMoveStatus">X MOVE READY</span>
+                    <span id="cProjectileStatus">C PROJECTILE READY</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Pause Menu -->
+        <div id="pauseMenu" class="hidden">
+            <div class="pause-container">
+                <h1>PAUSED</h1>
+                <p>Upgrades & Breaks</p>
+                
+                <div class="upgrades-grid">
+                    <div class="upgrade-card">
+                        <h3>Fire Rate</h3>
+                        <p id="fireRateDesc">Shoot faster</p>
+                        <button onclick="game.buyUpgrade('fireRate')">Cost: <span id="fireCost">50</span> 💰</button>
+                    </div>
+                    <div class="upgrade-card">
+                        <h3>Damage</h3>
+                        <p id="damageDesc">Deal more damage</p>
+                        <button onclick="game.buyUpgrade('damage')">Cost: <span id="damageCost">75</span> 💰</button>
+                    </div>
+                    <div class="upgrade-card">
+                        <h3>Health</h3>
+                        <p id="healthDesc">Increase max health</p>
+                        <button onclick="game.buyUpgrade('health')">Cost: <span id="healthCost">100</span> 💰</button>
+                    </div>
+                    <div class="upgrade-card">
+                        <h3>Speed</h3>
+                        <p id="speedDesc">Move faster</p>
+                        <button onclick="game.buyUpgrade('speed')">Cost: <span id="speedCost">60</span> 💰</button>
+                    </div>
+                    <div class="upgrade-card">
+                        <h3>Transform Power</h3>
+                        <p id="transformDesc">Stronger and longer transformation</p>
+                        <button onclick="game.buyUpgrade('transform')">Cost: <span id="transformCost">150</span> 💰</button>
+                    </div>
+                    <div class="upgrade-card">
+                        <h3>Healing</h3>
+                        <p id="healDesc">Restore 25% health</p>
+                        <button onclick="game.buyUpgrade('heal')">Cost: <span id="healCost">80</span> 💰</button>
+                    </div>
+                </div>
+
+                <div class="player-stats">
+                    <h2>Player Stats</h2>
+                    <p>Kills: <span id="kills">0</span></p>
+                    <p>Gold: <span id="gold">0</span></p>
+                    <p>Level: <span id="level">1</span></p>
+                </div>
+
+                <button id="resumeBtn" onclick="game.togglePause()" class="resume-btn">RESUME GAME (SPACE)</button>
+            </div>
+        </div>
+
+        <!-- Game Over Screen -->
+        <div id="gameOverScreen" class="hidden">
+            <div class="game-over-container">
+                <h1>GAME OVER</h1>
+                <div class="final-stats">
+                    <p>Final Score: <span id="finalScore">0</span></p>
+                    <p>Waves Survived: <span id="wavesSurvived">0</span></p>
+                    <p>Enemies Defeated: <span id="enemiesDefeated">0</span></p>
+                    <p>Gold Earned: <span id="goldEarned">0</span></p>
+                </div>
+                <button onclick="location.reload()" class="restart-btn">RESTART GAME</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="game.js"></script>
+</body>
+</html>
