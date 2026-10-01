@@ -1,81 +1,300 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Select a Game</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Browse and play games from Noobish Procyon.">
+    <title>Noobish Procyon | Games</title>
     <style>
+        :root {
+            color-scheme: light;
+            --ink: #17251f;
+            --muted: #65736c;
+            --paper: #f1f5ef;
+            --line: #d8e1d7;
+            --lime: #c7ed61;
+            --coral: #f0745e;
+        }
+
+        * { box-sizing: border-box; }
+
         body {
-            font-family: Arial;
+            margin: 0;
+            background: var(--paper);
+            color: var(--ink);
+            font-family: "Trebuchet MS", Verdana, sans-serif;
+        }
+
+        .page-shell {
+            width: min(1160px, calc(100% - 48px));
+            margin: 0 auto;
+            padding: 38px 0 56px;
+        }
+
+        .masthead {
             display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            background: #e8e8e8;
+            align-items: flex-end;
+            justify-content: space-between;
+            gap: 24px;
+            padding-bottom: 25px;
+            border-bottom: 1px solid var(--line);
         }
+
+        .eyebrow, .section-label, .project-number, .project-kind {
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        .eyebrow { margin: 0 0 12px; color: #477563; }
+
         h1 {
-            margin-bottom: 40px;
+            margin: 0;
+            font-family: Georgia, "Times New Roman", serif;
+            font-size: 48px;
+            font-weight: 700;
+            line-height: 1.05;
         }
-        button {
-            padding: 15px 30px;
-            font-size: 20px;
-            cursor: pointer;
-            border-radius: 10px;
-            border: none;
-            background: #4CAF50;
-            color: white;
-            margin: 10px;
-            width: 250px;
+
+        .intro {
+            max-width: 420px;
+            margin: 12px 0 0;
+            color: var(--muted);
+            font-size: 15px;
+            line-height: 1.5;
         }
-        button:hover {
-            background: #45a049;
+
+        .project-count {
+            flex: 0 0 auto;
+            padding: 10px 13px;
+            border: 1px solid #bfd28d;
+            border-radius: 5px;
+            background: #e3efc9;
+            color: #314c25;
+            font-size: 12px;
+            font-weight: 700;
+        }
+
+        .section-heading {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin: 23px 0 13px;
+        }
+
+        .section-heading h2 {
+            margin: 0;
+            font-size: 14px;
+            font-weight: 700;
+        }
+
+        .section-label { color: var(--muted); }
+
+        .project-grid {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 14px;
+        }
+
+        .project-card {
+            min-width: 0;
+            overflow: hidden;
+            border: 1px solid var(--line);
+            border-radius: 6px;
+            background: #fff;
+            color: inherit;
+            text-decoration: none;
+            animation: arrive 420ms both;
+            transition: transform 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
+        }
+
+        .project-card:hover {
+            transform: translateY(-3px);
+            border-color: #8ba999;
+            box-shadow: 0 8px 20px rgba(23, 37, 31, 0.1);
+        }
+
+        .project-card:focus-visible {
+            outline: 3px solid #287c65;
+            outline-offset: 3px;
+        }
+
+        .project-card:nth-child(2) { animation-delay: 35ms; }
+        .project-card:nth-child(3) { animation-delay: 70ms; }
+        .project-card:nth-child(4) { animation-delay: 105ms; }
+        .project-card:nth-child(5) { animation-delay: 140ms; }
+        .project-card:nth-child(6) { animation-delay: 175ms; }
+        .project-card:nth-child(7) { animation-delay: 210ms; }
+        .project-card:nth-child(8) { animation-delay: 245ms; }
+        .project-card:nth-child(9) { animation-delay: 280ms; }
+        .project-card:nth-child(10) { animation-delay: 315ms; }
+
+        .project-art {
+            position: relative;
+            display: flex;
+            height: 105px;
+            align-items: flex-end;
+            justify-content: space-between;
+            overflow: hidden;
+            padding: 12px 14px;
+            color: #fff;
+            isolation: isolate;
+        }
+
+        .project-art::before {
+            position: absolute;
+            z-index: -1;
+            top: 12px;
+            right: 28px;
+            width: 76px;
+            height: 76px;
+            border: 2px solid rgba(255, 255, 255, 0.58);
+            border-radius: 50%;
+            content: "";
+        }
+
+        .project-art::after {
+            position: absolute;
+            z-index: -1;
+            top: 28px;
+            right: 44px;
+            width: 43px;
+            height: 43px;
+            border: 1px solid rgba(255, 255, 255, 0.6);
+            border-radius: 50%;
+            content: "";
+        }
+
+        .art-cleanup { background: repeating-linear-gradient(135deg, transparent 0 11px, rgba(255,255,255,.09) 11px 13px), #277666; }
+        .art-shapes { background: radial-gradient(circle at 78% 42%, #f6c95d 0 8px, transparent 9px), linear-gradient(125deg, #d34f55, #813e72); }
+        .art-fusion { background: repeating-linear-gradient(45deg, transparent 0 16px, rgba(255,255,255,.11) 16px 18px), #b64f35; }
+        .art-legacy { background: radial-gradient(circle at 77% 46%, #efb95f 0 17px, transparent 18px), #705b3d; }
+        .art-orbit { background: repeating-radial-gradient(ellipse at 78% 50%, transparent 0 10px, rgba(255,255,255,.23) 11px 12px), #375f86; }
+        .art-orbfront { background: linear-gradient(150deg, transparent 52%, rgba(255,255,255,.16) 53% 56%, transparent 57%), #287f8a; }
+        .art-starfall { background: radial-gradient(circle at 72% 30%, #f4d36c 0 3px, transparent 4px), radial-gradient(circle at 88% 62%, #fff 0 2px, transparent 3px), #394d76; }
+        .art-remastered { background: repeating-linear-gradient(90deg, transparent 0 20px, rgba(255,255,255,.11) 20px 22px), linear-gradient(130deg, #547c55, #2c695f); }
+        .art-hyper { background: repeating-conic-gradient(from 20deg at 78% 48%, rgba(255,255,255,.16) 0 8deg, transparent 8deg 28deg), #bd4c48; }
+        .art-dungeon { background: repeating-linear-gradient(0deg, transparent 0 22px, rgba(255,255,255,.11) 22px 24px), repeating-linear-gradient(90deg, transparent 0 22px, rgba(255,255,255,.11) 22px 24px), #555e43; }
+
+        .project-number, .project-kind { position: relative; z-index: 1; }
+        .project-number { font-family: Georgia, "Times New Roman", serif; font-size: 25px; letter-spacing: 0; }
+        .project-kind { padding: 5px 7px; border: 1px solid rgba(255,255,255,.48); border-radius: 3px; background: rgba(18, 28, 27, .2); font-size: 9px; }
+
+        .project-info {
+            display: flex;
+            min-height: 82px;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            padding: 13px 14px;
+        }
+
+        .project-info h3 { margin: 0; font-size: 15px; line-height: 1.25; }
+        .project-info p { margin: 5px 0 0; color: var(--muted); font-size: 12px; line-height: 1.35; }
+
+        .launch-mark {
+            display: grid;
+            width: 30px;
+            height: 30px;
+            flex: 0 0 auto;
+            place-items: center;
+            border-radius: 50%;
+            background: var(--lime);
+        }
+
+        .launch-mark::after {
+            width: 8px;
+            height: 8px;
+            border-top: 2px solid var(--ink);
+            border-right: 2px solid var(--ink);
+            content: "";
+            transform: translate(-1px, 1px) rotate(45deg);
+        }
+
+        @keyframes arrive {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @media (max-width: 780px) {
+            .project-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        }
+
+        @media (max-width: 540px) {
+            .page-shell { width: min(100% - 28px, 430px); padding-top: 25px; }
+            .masthead { align-items: flex-start; flex-direction: column; gap: 14px; }
+            h1 { font-size: 38px; }
+            .project-count { padding: 7px 10px; }
+            .project-grid { grid-template-columns: 1fr; gap: 11px; }
+            .project-art { height: 92px; }
+            .project-info { min-height: 72px; }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
         }
     </style>
 </head>
 <body>
+    <main class="page-shell">
+        <header class="masthead">
+            <div>
+                <p class="eyebrow">A collection of independent games</p>
+                <h1>Noobish Procyon's Projects</h1>
+                <p class="intro">Pick a world and jump straight in. Every project is playable from here.</p>
+            </div>
+            <div class="project-count">10 PROJECTS</div>
+        </header>
 
-    <h1>Noobish Procyon's Projects</h1>
-
-    <button onclick="goToGame1()">Play Clean Up.io  </button>
-    <button onclick="goToGame2()">Play Shape Summoner  </button>
-    <button onclick="goToGame3()">Play Fusion Lab</button>
-    <button onclick="goToGame4()">Play Shape Summoner LEGACY(its kinda broken)</button>
-    <button onclick="goToGame5()">Play Orbital Defense</button>
-    <button onclick="goToGame6()">Play Orbfront</button>
-    <button onclick="goToGame7()">Play Starfall Academy</button>
-    <button onclick="goToGame8()">Play Shape Summoner REMASTERED</button>
-    <button onclick="goToGame9()">Play Hyper Fighters</button>
-    <button onclick="goToGame10()">Play Circlebound Dungeon Run</button>
-    <script>
-        function goToGame1() {
-            window.location.href = "clean-up.io/index.html";
-        }
-        function goToGame2() {
-            window.location.href = "shapesummoner/index.html";
-        }
-        function goToGame3() {
-            window.location.href = "FusionLab/index.html";
-        }
-        function goToGame4() {
-            window.location.href = "shapesummonerlegacy/index.html";
-        }
-         function goToGame5() {
-            window.location.href = "orbit-defenders/index.html";
-        }
-          function goToGame6() {
-            window.location.href = "tbs/index.html";
-        }
-          function goToGame7() {
-            window.location.href = "starfall-academy/index.html";
-        }
-         function goToGame8() {
-            window.location.href = "shapesummonerremastered/index.html";
-        }
-         function goToGame9() {
-            window.location.href = "hyperfighters/index.html";
-    }
-    function goToGame10() {
-            window.location.href = "dungeoncrawlers/index.html";
-        }
-    </script>
+        <section aria-labelledby="games-heading">
+            <div class="section-heading">
+                <h2 id="games-heading">Choose a game</h2>
+                <span class="section-label">THE FULL COLLECTION</span>
+            </div>
+            <div class="project-grid">
+                <a class="project-card" href="clean-up.io/index.html">
+                    <div class="project-art art-cleanup" aria-hidden="true"><span class="project-number">01</span><span class="project-kind">ARCADE</span></div>
+                    <div class="project-info"><div><h3>Clean Up.io</h3><p>Clean up and survive the chaos.</p></div><span class="launch-mark" aria-hidden="true"></span></div>
+                </a>
+                <a class="project-card" href="shapesummoner/index.html">
+                    <div class="project-art art-shapes" aria-hidden="true"><span class="project-number">02</span><span class="project-kind">ACTION</span></div>
+                    <div class="project-info"><div><h3>Shape Summoner</h3><p>Summon shapes and take on the arena.</p></div><span class="launch-mark" aria-hidden="true"></span></div>
+                </a>
+                <a class="project-card" href="FusionLab/index.html">
+                    <div class="project-art art-fusion" aria-hidden="true"><span class="project-number">03</span><span class="project-kind">BATTLE</span></div>
+                    <div class="project-info"><div><h3>Fusion Lab</h3><p>Build your fighter and enter the fight.</p></div><span class="launch-mark" aria-hidden="true"></span></div>
+                </a>
+                <a class="project-card" href="shapesummonerlegacy/index.html">
+                    <div class="project-art art-legacy" aria-hidden="true"><span class="project-number">04</span><span class="project-kind">LEGACY</span></div>
+                    <div class="project-info"><div><h3>Shape Summoner Legacy</h3><p>The original edition. Some parts are rough.</p></div><span class="launch-mark" aria-hidden="true"></span></div>
+                </a>
+                <a class="project-card" href="orbit-defenders/index.html">
+                    <div class="project-art art-orbit" aria-hidden="true"><span class="project-number">05</span><span class="project-kind">DEFENSE</span></div>
+                    <div class="project-info"><div><h3>Orbital Defense</h3><p>Hold the line around the orbit.</p></div><span class="launch-mark" aria-hidden="true"></span></div>
+                </a>
+                <a class="project-card" href="tbs/index.html">
+                    <div class="project-art art-orbfront" aria-hidden="true"><span class="project-number">06</span><span class="project-kind">STRATEGY</span></div>
+                    <div class="project-info"><div><h3>Orbfront</h3><p>Plan your moves across the battlefield.</p></div><span class="launch-mark" aria-hidden="true"></span></div>
+                </a>
+                <a class="project-card" href="starfall-academy/index.html">
+                    <div class="project-art art-starfall" aria-hidden="true"><span class="project-number">07</span><span class="project-kind">ADVENTURE</span></div>
+                    <div class="project-info"><div><h3>Starfall Academy</h3><p>Your next chapter starts among the stars.</p></div><span class="launch-mark" aria-hidden="true"></span></div>
+                </a>
+                <a class="project-card" href="shapesummonerremastered/index.html">
+                    <div class="project-art art-remastered" aria-hidden="true"><span class="project-number">08</span><span class="project-kind">REMASTERED</span></div>
+                    <div class="project-info"><div><h3>Shape Summoner Remastered</h3><p>A refreshed take on the shape-summoning game.</p></div><span class="launch-mark" aria-hidden="true"></span></div>
+                </a>
+                <a class="project-card" href="hyperfighters/index.html">
+                    <div class="project-art art-hyper" aria-hidden="true"><span class="project-number">09</span><span class="project-kind">ARENA</span></div>
+                    <div class="project-info"><div><h3>Hyper Fighters</h3><p>Survive waves with powerful abilities.</p></div><span class="launch-mark" aria-hidden="true"></span></div>
+                </a>
+                <a class="project-card" href="dungeoncrawlers/index.html">
+                    <div class="project-art art-dungeon" aria-hidden="true"><span class="project-number">10</span><span class="project-kind">DUNGEON</span></div>
+                    <div class="project-info"><div><h3>Circlebound Dungeon Run</h3><p>Descend into a circlebound dungeon.</p></div><span class="launch-mark" aria-hidden="true"></span></div>
+                </a>
+            </div>
+        </section>
+    </main>
 </body>
 </html>
