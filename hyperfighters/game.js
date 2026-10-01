@@ -62,6 +62,7 @@ const game = {
     barriers: [],
     trails: [],
     explosions: [],
+    shockwaves: [],
     
     // Visual effects
     screenShakeIntensity: 0,
@@ -263,7 +264,6 @@ const game = {
                 const dist = Math.sqrt((bullet.x - enemy.x) ** 2 + (bullet.y - enemy.y) ** 2);
                 if (dist < bullet.radius + enemy.radius) {
                     enemy.health -= this.player.damage;
-                    this.createParticles(bullet.x, bullet.y, 8, '#FFD700');
                     this.flashScreen(0.1);
                     hit = true;
                     
@@ -287,7 +287,9 @@ const game = {
                         const multiplier = enemy.type === 'boss' ? 3 : enemy.type === 'tank' ? 1.5 : 1;
                         const comboBonus = Math.min(this.killCombo * 0.3, 2);
                         this.createExplosion(enemy.x, enemy.y, '#00FF00', 15 * multiplier * comboBonus, 25 * multiplier);
-                        this.screenShake(10 * multiplier * comboBonus);\n                    }\n                    break;
+                        this.screenShake(10 * multiplier * comboBonus);
+                    }
+                    break;
                 }
             }
             
@@ -311,7 +313,6 @@ const game = {
                 const dist = Math.hypot(proj.x - enemy.x, proj.y - enemy.y);
                 if (dist < proj.radius + enemy.radius) {
                     enemy.health -= proj.damage;
-                    this.createParticles(proj.x, proj.y, 20, proj.color);
                     this.flashScreen(0.15);
                     hit = true;
                     
@@ -351,7 +352,9 @@ const game = {
                         const multiplier = enemy.type === 'boss' ? 4 : enemy.type === 'tank' ? 2 : 1;
                         const comboBonus = Math.min(this.killCombo * 0.3, 2);
                         this.createExplosion(enemy.x, enemy.y, proj.color, 20 * multiplier * comboBonus, 35 * multiplier);
-                        this.screenShake(15 * multiplier * comboBonus);\n                    }\n                    break;
+                        this.screenShake(15 * multiplier * comboBonus);
+                    }
+                    break;
                 }
             }
             
@@ -379,7 +382,6 @@ const game = {
                         this.gold += 15;
                         this.kills++;
                         this.waveKills++;
-                        this.createParticles(enemy.x, enemy.y, 15, '#00FF00');
                     }
                 }
             }
@@ -406,7 +408,6 @@ const game = {
                         this.gold += 15;
                         this.kills++;
                         this.waveKills++;
-                        this.createParticles(enemy.x, enemy.y, 15, '#FF00FF');
                     }
                 }
             }
@@ -445,7 +446,6 @@ const game = {
             const playerDist = Math.sqrt((enemy.x - this.player.x) ** 2 + (enemy.y - this.player.y) ** 2);
             if (playerDist < enemy.radius + this.player.radius) {
                 if (this.player.shieldTime <= 0) this.player.health -= 0.5;
-                this.createParticles(enemy.x, enemy.y, 8, '#FF0000');
             }
         }
         
@@ -460,6 +460,13 @@ const game = {
             if (p.life <= 0) {
                 this.particles.splice(i, 1);
             }
+        }
+
+        for (let i = this.shockwaves.length - 1; i >= 0; i--) {
+            const wave = this.shockwaves[i];
+            wave.radius += wave.speed;
+            wave.life--;
+            if (wave.life <= 0) this.shockwaves.splice(i, 1);
         }
         
         // Ultimate cooldown
@@ -603,9 +610,11 @@ const game = {
         this.player.transformActive = true;
         this.player.transformDuration = 420;
         this.player.transformCooldown = 720;
-        this.player.radius = 35;
-        this.player.speed *= 1.3;
-        this.createParticles(this.player.x, this.player.y, 50, '#FF00FF');
+        this.player.radius = 54;
+        this.player.speed *= 1.45;
+        this.createShockwave(this.player.x, this.player.y, '#FF00FF', 52, 22, 3.8, 6);
+        this.flashScreen(0.2);
+        this.screenShake(12);
     },
 
     startLaserCharge() {
@@ -674,14 +683,28 @@ const game = {
 
     xMove() {
         if (this.player.xMoveCooldown > 0 || this.paused || !this.running) return;
-        let dx = (this.keysPressed['ArrowRight'] || this.keysPressed['d'] ? 1 : 0) - (this.keysPressed['ArrowLeft'] || this.keysPressed['a'] ? 1 : 0);
-        let dy = (this.keysPressed['ArrowDown'] || this.keysPressed['s'] ? 1 : 0) - (this.keysPressed['ArrowUp'] || this.keysPressed['w'] ? 1 : 0);
-        if (!dx && !dy) dy = -1;
-        const length = Math.hypot(dx, dy);
-        this.player.x = Math.max(this.player.radius, Math.min(canvas.width - this.player.radius, this.player.x + dx / length * 200));
-        this.player.y = Math.max(this.player.radius, Math.min(canvas.height - this.player.radius, this.player.y + dy / length * 200));
-        this.player.xMoveCooldown = 150;
-        this.createParticles(this.player.x, this.player.y, 25, '#FF00FF');
+        const pushRadius = this.player.transformActive ? 240 : 160;
+        const pushForce = this.player.transformActive ? 28 : 18;
+
+        for (const enemy of this.enemies) {
+            const dx = enemy.x - this.player.x;
+            const dy = enemy.y - this.player.y;
+            const dist = Math.hypot(dx, dy);
+            if (dist > 0 && dist < pushRadius) {
+                const dirX = dx / dist;
+                const dirY = dy / dist;
+                const strength = (1 - dist / pushRadius) * pushForce;
+                enemy.x += dirX * strength;
+                enemy.y += dirY * strength;
+                enemy.x = Math.max(0, Math.min(canvas.width, enemy.x));
+                enemy.y = Math.max(0, Math.min(canvas.height, enemy.y));
+            }
+        }
+
+        this.createShockwave(this.player.x, this.player.y, this.player.transformActive ? '#FF00FF' : '#00FFFF', pushRadius * 0.45, 22, 3.5, 6);
+        this.flashScreen(this.player.transformActive ? 0.24 : 0.14);
+        this.screenShake(this.player.transformActive ? 14 : 8);
+        this.player.xMoveCooldown = this.player.transformActive ? 100 : 140;
     },
 
     cProjectile() {
@@ -789,15 +812,25 @@ const game = {
         this.player.laserCooldown = 180;
     },
 
-    phaseJump() {
+    voidShockwave() {
         if (this.player.xMoveCooldown > 0 || this.paused || !this.running) return;
-        let dx = (this.keysPressed['ArrowRight'] || this.keysPressed['d'] ? 1 : 0) - (this.keysPressed['ArrowLeft'] || this.keysPressed['a'] ? 1 : 0);
-        let dy = (this.keysPressed['ArrowDown'] || this.keysPressed['s'] ? 1 : 0) - (this.keysPressed['ArrowUp'] || this.keysPressed['w'] ? 1 : 0);
-        if (!dx && !dy) dy = -1;
-        const length = Math.hypot(dx, dy);
-        this.player.x = Math.max(this.player.radius, Math.min(canvas.width - this.player.radius, this.player.x + dx / length * 300));
-        this.player.y = Math.max(this.player.radius, Math.min(canvas.height - this.player.radius, this.player.y + dy / length * 300));
-        this.createParticles(this.player.x, this.player.y, 50, '#00FFFF');
+        const pushRadius = 560;
+        for (const enemy of this.enemies) {
+            const ex = enemy.x - this.player.x;
+            const ey = enemy.y - this.player.y;
+            const dist = Math.hypot(ex, ey);
+            if (dist > 0 && dist < pushRadius) {
+                const strength = 26 + (1 - dist / pushRadius) * 150;
+                enemy.x += (ex / dist) * strength;
+                enemy.y += (ey / dist) * strength;
+                enemy.x = Math.max(0, Math.min(canvas.width, enemy.x));
+                enemy.y = Math.max(0, Math.min(canvas.height, enemy.y));
+            }
+        }
+
+        this.createShockwave(this.player.x, this.player.y, '#FF00FF', 24, 40, 14, 12);
+        this.flashScreen(0.28);
+        this.screenShake(18);
         this.player.xMoveCooldown = 100;
     },
 
@@ -848,6 +881,11 @@ const game = {
     flashScreen(alpha = 0.3) {
         this.screenFlashAlpha = Math.max(this.screenFlashAlpha, alpha);
     },
+
+    createShockwave(x, y, color, radius, life, speed, lineWidth) {
+        this.shockwaves.push({ x, y, color, radius, life, maxLife: life, speed, lineWidth });
+        if (this.shockwaves.length > 12) this.shockwaves.shift();
+    },
     
     createExplosion(x, y, color = '#FF6600', size = 20, count = 30) {
         this.explosions.push({
@@ -888,6 +926,8 @@ const game = {
     keysPressed: {}
 };
 
+const isXKey = (e) => e.code === 'KeyX' || e.key === 'x' || e.key === 'X' || (e.key && e.key.toLowerCase && e.key.toLowerCase() === 'x');
+
 // Input handling
 document.addEventListener('keydown', (e) => {
     game.keysPressed[e.key] = true;
@@ -904,7 +944,7 @@ document.addEventListener('keydown', (e) => {
         if (e.key.toLowerCase() === 'e') game.reflectBarrier();
         if (e.key === 'Shift') game.blinkStrike();
         if (e.key.toLowerCase() === 'z') game.laserBarrage();
-        if (e.key.toLowerCase() === 'x') game.phaseJump();
+        if (isXKey(e)) game.voidShockwave();
         if (e.key.toLowerCase() === 'c') game.shatter();
         return;
     }
@@ -915,7 +955,7 @@ document.addEventListener('keydown', (e) => {
     if (e.key === 'Shift') game.dashAbility();
     if (e.key.toLowerCase() === 'v') game.transformAbility();
     if (e.key.toLowerCase() === 'z') game.startLaserCharge();
-    if (e.key.toLowerCase() === 'x') game.xMove();
+    if (isXKey(e)) game.xMove();
     if (e.key.toLowerCase() === 'c') game.cProjectile();
 });
 
@@ -1003,10 +1043,13 @@ function render() {
     
     // Draw transform glow
     if (player.transformActive) {
-        ctx.strokeStyle = 'rgba(255, 0, 255, 0.6)';
-        ctx.lineWidth = 3;
+        ctx.strokeStyle = 'rgba(255, 0, 255, 0.9)';
+        ctx.lineWidth = 5;
         ctx.beginPath();
-        ctx.arc(player.x, player.y, player.radius + 15, 0, Math.PI * 2);
+        ctx.arc(player.x, player.y, player.radius + 22 + Math.sin(Date.now() / 120) * 3, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.arc(player.x, player.y, player.radius + 10, 0, Math.PI * 2);
         ctx.stroke();
     }
     
@@ -1177,6 +1220,30 @@ function render() {
         ctx.fillRect(p.x - p.size / 2, p.y - p.size / 2, p.size, p.size);
         ctx.globalAlpha = 1;
     }
+
+    // Draw ability shockwaves
+    for (const wave of game.shockwaves) {
+        const fade = wave.life / wave.maxLife;
+        ctx.strokeStyle = wave.color;
+        ctx.globalAlpha = fade * 0.16;
+        ctx.lineWidth = wave.lineWidth * 3;
+        ctx.beginPath();
+        ctx.arc(wave.x, wave.y, wave.radius, 0, Math.PI * 2);
+        ctx.stroke();
+
+        ctx.globalAlpha = fade;
+        ctx.lineWidth = wave.lineWidth;
+        ctx.beginPath();
+        ctx.arc(wave.x, wave.y, wave.radius, 0, Math.PI * 2);
+        ctx.stroke();
+
+        ctx.globalAlpha = fade * 0.4;
+        ctx.lineWidth = Math.max(1, wave.lineWidth * 0.5);
+        ctx.beginPath();
+        ctx.arc(wave.x, wave.y, Math.max(0, wave.radius - wave.speed * 3), 0, Math.PI * 2);
+        ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
 }
 
 // Game loop
