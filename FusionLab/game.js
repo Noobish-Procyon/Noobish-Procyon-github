@@ -11,6 +11,7 @@ window.onresize = resizeCanvas;
 const fusionEnergySpan = document.getElementById("fusionEnergy");
 const selectedCircleSpan = document.getElementById("selectedCircle");
 const circleListDiv = document.getElementById("circleList");
+const fusionIndexDiv = document.getElementById("fusionIndex");
 
 const battleBtn = document.getElementById("battleBtn");
 const fuseBtn = document.getElementById("fuseBtn");
@@ -42,13 +43,16 @@ function updateUI() {
     selectedCircleSpan.textContent = "None";
   }
   renderCircleList();
+  renderFusionIndex();
 }
 
 function renderCircleList() {
   circleListDiv.innerHTML = "";
   circles.forEach((c, i) => {
     const btn = document.createElement("button");
-    btn.textContent = `${i}: ${c.name} (Lv${c.level})`;
+    btn.type = "button";
+    btn.className = i === selectedCircleIndex ? "selected" : "";
+    btn.innerHTML = `<span class="tag">#${i}</span> ${c.name} • Lv${c.level}`;
     btn.onclick = () => {
       selectedCircleIndex = i;
       updateUI();
@@ -57,32 +61,64 @@ function renderCircleList() {
   });
 }
 
-battleBtn.onclick = () => {
-  if (inBattle) return;
-  if (selectedCircleIndex < 0) return;
-  const circle = circles[selectedCircleIndex];
-  inBattle = true;
-  circle.hp = circle.maxHp;
-  battle(circle, ctx, (win) => {
-    inBattle = false;
-    if (win) {
-      fusionEnergy += 10;
-    }
-    updateUI();
+function renderFusionIndex() {
+  const recipes = getFusionComboIndex();
+  fusionIndexDiv.innerHTML = "";
+
+  recipes.forEach((recipe) => {
+    const row = document.createElement("div");
+    row.className = `combo ${isRecipeUnlocked(recipe.id) ? "unlocked" : "locked"}`;
+    row.innerHTML = `
+      <span class="combo-id">${recipe.id}</span>
+      <span class="combo-name">${recipe.name}</span>
+      <span class="combo-state">${isRecipeUnlocked(recipe.id) ? "Ready" : "Locked"}</span>
+    `;
+    fusionIndexDiv.appendChild(row);
   });
-};
+}
+
+if (battleBtn) {
+  battleBtn.onclick = () => {
+    if (inBattle) return;
+    if (selectedCircleIndex < 0) return;
+    const circle = circles[selectedCircleIndex];
+    inBattle = true;
+    circle.hp = circle.maxHp;
+    battle(circle, ctx, (win) => {
+      inBattle = false;
+      if (win) {
+        fusionEnergy += 10;
+      }
+      updateUI();
+    });
+  };
+}
 
 fuseBtn.onclick = () => {
   if (circles.length < 2) return;
   if (selectedCircleIndex < 0) return;
+
   const c1 = circles[selectedCircleIndex];
   let idx2 = randInt(0, circles.length - 1);
   if (idx2 === selectedCircleIndex && circles.length > 1) {
     idx2 = (idx2 + 1) % circles.length;
   }
+
   const c2 = circles[idx2];
   const fused = fuseCircles(c1, c2);
+  if (!fused) return;
+
   circles.push(fused);
+
+  const recipe = registerFusionRecipe(c1, c2, fused);
+  if (recipe) {
+    selectedCircleSpan.textContent = `${recipe.name} unlocked`;
+  } else {
+    fusionEnergy += 8;
+  }
+
+  fusionPity += 1;
+  selectedCircleIndex = circles.length - 1;
   updateUI();
 };
 

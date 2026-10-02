@@ -4,43 +4,241 @@
   <meta charset="UTF-8">
   <title>Fusion Lab</title>
   <style>
+    :root {
+      --bg-1: #070b17;
+      --bg-2: #111c2d;
+      --panel: rgba(12, 18, 32, 0.74);
+      --panel-border: rgba(130, 160, 255, 0.35);
+      --accent: #7ae7ff;
+      --accent-2: #8f7cff;
+      --gold: #ffd36a;
+      --text: #edf4ff;
+      --muted: #a4b3d6;
+      --danger: #ff7a7a;
+    }
+
     html, body {
       margin: 0;
       padding: 0;
       overflow: hidden;
-      background: #111;
+      background:
+        radial-gradient(circle at top left, rgba(126, 94, 255, 0.25), transparent 30%),
+        radial-gradient(circle at bottom right, rgba(74, 201, 255, 0.25), transparent 25%),
+        linear-gradient(135deg, var(--bg-1), var(--bg-2));
+      color: var(--text);
+      font-family: Arial, sans-serif;
     }
+
     canvas {
       display: block;
       width: 100vw;
       height: 100vh;
     }
+
     #ui {
       position: absolute;
-      top: 10px;
-      left: 10px;
+      top: 18px;
+      left: 18px;
       z-index: 10;
-      background: rgba(0,0,0,0.4);
-      padding: 10px;
-      border-radius: 8px;
-      color: white;
-      font-family: Arial;
+      width: min(360px, calc(100vw - 28px));
+      background: var(--panel);
+      border: 1px solid var(--panel-border);
+      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.28);
+      border-radius: 18px;
+      padding: 16px 14px 12px;
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
     }
-    button { margin: 2px; }
+
+    .hud-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    .title {
+      font-size: 1.1rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--accent);
+    }
+
+    .energy-pill,
+    .selection-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      font-size: 0.82rem;
+      color: var(--muted);
+    }
+
+    .value {
+      color: var(--gold);
+      font-weight: 700;
+    }
+
+    .status-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin: 6px 0 12px;
+      font-size: 0.9rem;
+      color: var(--muted);
+    }
+
+    .button-row {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    button {
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.04);
+      color: var(--text);
+      padding: 9px 10px;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      cursor: pointer;
+      transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+    }
+
+    button:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 18px rgba(122, 231, 255, 0.12);
+      border-color: rgba(122, 231, 255, 0.4);
+    }
+
+    #fuseBtn {
+      background: linear-gradient(135deg, rgba(138, 99, 255, 0.9), rgba(75, 140, 255, 0.78));
+      border-color: rgba(138, 99, 255, 0.75);
+    }
+
+    #battleBtn {
+      background: linear-gradient(135deg, rgba(255, 179, 71, 0.8), rgba(255, 118, 92, 0.7));
+      border-color: rgba(255, 179, 71, 0.7);
+    }
+
+    #saveBtn, #loadBtn {
+      background: rgba(255, 255, 255, 0.06);
+    }
+
+    .panel-title {
+      margin: 4px 0 8px;
+      color: var(--muted);
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+    }
+
+    .circle-list,
+    .fusion-index {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      max-height: 22vh;
+      overflow-y: auto;
+      padding-right: 4px;
+    }
+
+    .circle-list button,
+    .combo {
+      width: 100%;
+      text-align: left;
+      background: rgba(255, 255, 255, 0.04);
+      padding: 10px 12px;
+      border-radius: 10px;
+      color: var(--text);
+      font-size: 0.9rem;
+      display: block;
+    }
+
+    .circle-list button.selected {
+      border-color: rgba(122, 231, 255, 0.9);
+      background: rgba(122, 231, 255, 0.12);
+      box-shadow: inset 0 0 0 1px rgba(122, 231, 255, 0.18);
+    }
+
+    .circle-list button .tag,
+    .combo-id {
+      color: var(--accent);
+      font-weight: 700;
+    }
+
+    .combo {
+      display: grid;
+      grid-template-columns: 24px 1fr auto;
+      align-items: center;
+      gap: 8px;
+      border: 1px solid rgba(255,255,255,0.06);
+    }
+
+    .combo.locked {
+      opacity: 0.7;
+    }
+
+    .combo.unlocked {
+      border-color: rgba(122, 231, 255, 0.45);
+      background: rgba(122, 231, 255, 0.08);
+    }
+
+    .combo-state {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+    }
+
+    .hidden-btn {
+      display: none !important;
+    }
+
+    ::-webkit-scrollbar {
+      width: 8px;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.15);
+      border-radius: 999px;
+    }
   </style>
 </head>
 <body>
-  <div id="ui">
-    <div>Fusion Energy: <span id="fusionEnergy">0</span></div>
-    <div>Selected Circle: <span id="selectedCircle">None</span></div>
-    <button id="battleBtn">Battle</button>
-    <button id="fuseBtn">Fuse Selected + Random</button>
-    <button id="saveBtn">Save</button>
-    <button id="loadBtn">Load</button>
-    <div id="circleList"></div>
-  </div>
-
   <canvas id="gameCanvas"></canvas>
+
+  <div id="ui">
+    <div class="hud-header">
+      <div class="title">Fusion Lab</div>
+      <div class="energy-pill">Energy: <span id="fusionEnergy" class="value">0</span></div>
+    </div>
+
+    <div class="status-row">
+      <span>Selected Circle</span>
+      <span id="selectedCircle" class="selection-pill">None</span>
+    </div>
+
+    <div class="button-row">
+      <button id="battleBtn" class="hidden-btn">Battle</button>
+      <button id="fuseBtn">Fuse</button>
+      <button id="saveBtn">Save</button>
+      <button id="loadBtn">Load</button>
+    </div>
+
+    <div class="panel-title">Circle Vault</div>
+    <div id="circleList" class="circle-list"></div>
+
+    <div class="panel-title">Fusion Index</div>
+    <div id="fusionIndex" class="fusion-index"></div>
+  </div>
 
   <script src="circle.js"></script>
   <script src="enemy.js"></script>
