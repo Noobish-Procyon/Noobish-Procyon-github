@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#17231e">
+  <meta name="description" content="Roll orb gachas, collect rare finds, and trade them for coins.">
+  <title>Orb Trading</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <script src="game.js" defer></script>
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <a class="brand" href="../index.html" aria-label="Back to Noobish Procyon games">
+        <span class="brand-symbol" aria-hidden="true"><i></i><i></i><i></i></span>
+        <span>ORB<span class="brand-light">TRADING</span></span>
+      </a>
+      <a class="back-link" href="../index.html"><span aria-hidden="true">←</span> ALL GAMES</a>
+      <div class="wallet" aria-live="polite">
+        <span class="wallet-label">YOUR COINS</span>
+        <strong><span class="coin-mark" aria-hidden="true">¢</span><span id="coin-balance">5,000</span></strong>
+      </div>
+    </header>
+
+    <main>
+      <section class="welcome-row" aria-labelledby="welcome-title">
+        <div>
+          <p class="eyebrow"><span class="live-dot"></span> ORB EXCHANGE · MARKET OPEN</p>
+          <h1 id="welcome-title">A little luck.<br><em>A lot of orbs.</em></h1>
+        </div>
+        <p class="welcome-note">Pick a gacha, see the odds, and roll for your next big find. Your collection stays saved on this device.</p>
+      </section>
+
+      <section class="market-layout" aria-label="Orb trading game">
+        <div class="market-main">
+          <section class="gacha-panel" aria-labelledby="gacha-title">
+            <div class="panel-topline">
+              <div><p class="eyebrow">CURRENT GACHA</p><h2 id="gacha-title">Copper</h2></div>
+              <button class="button button-quiet" id="open-gachas" type="button"><span class="button-icon" aria-hidden="true">▦</span> Choose gacha</button>
+            </div>
+            <div class="gacha-feature">
+              <div class="orb-stage" id="orb-stage" aria-hidden="true">
+                <div class="orbit orbit-one"></div><div class="orbit orbit-two"></div>
+                <div class="feature-orb"><span></span></div>
+                <div class="orbit-spark spark-one"></div><div class="orbit-spark spark-two"></div>
+              </div>
+              <div class="feature-copy">
+                <p class="eyebrow" id="gacha-tier">STARTER SERIES</p>
+                <p class="feature-description" id="gacha-description">A first step into the orb market. Every rarity is in play.</p>
+                <button class="button button-roll" id="roll-button" type="button">
+                  <span class="roll-symbol" aria-hidden="true">✦</span>
+                  <span>Roll <b id="roll-gacha-name">Copper</b></span>
+                  <span class="roll-cost"><span aria-hidden="true">¢</span><span id="roll-cost">100</span></span>
+                </button>
+                <p class="roll-message" id="roll-message" aria-live="polite">One roll. One orb. What will you find?</p>
+              </div>
+            </div>
+            <div class="odds-section">
+              <div class="subhead"><h3>Drop odds</h3><span>PER ROLL</span></div>
+              <div class="odds-list" id="odds-list"></div>
+            </div>
+          </section>
+
+          <section class="inventory-panel" aria-labelledby="inventory-title">
+            <div class="panel-topline inventory-heading">
+              <div><p class="eyebrow">YOUR COLLECTION</p><h2 id="inventory-title">Orb inventory <span class="item-count" id="inventory-count">0</span></h2></div>
+              <button class="button button-sell-all" id="sell-all" type="button" disabled><span aria-hidden="true">↗</span> Sell all</button>
+            </div>
+            <div class="inventory-empty" id="inventory-empty">
+              <div class="empty-gem" aria-hidden="true"><span></span></div>
+              <p>No orbs in your collection yet.</p>
+              <span>Your next roll could change that.</span>
+            </div>
+            <div class="inventory-grid" id="inventory-grid" aria-live="polite"></div>
+          </section>
+        </div>
+
+        <aside class="side-column">
+          <section class="last-pull-panel" aria-labelledby="last-pull-title">
+            <div class="subhead"><h3 id="last-pull-title">Last pull</h3><span id="pull-number">#000</span></div>
+            <div class="last-pull-content" id="last-pull-content">
+              <div class="pull-placeholder" aria-hidden="true"><span>?</span></div>
+              <p>Make your first roll</p>
+              <span>Your latest orb will show up here.</span>
+            </div>
+          </section>
+          <section class="market-note">
+            <p class="eyebrow">MARKET BOARD</p>
+            <div class="market-stat"><span>Rarities</span><strong>8</strong></div>
+            <div class="market-stat"><span>Gachas</span><strong>8</strong></div>
+            <div class="market-stat"><span>1oAK jackpot</span><strong>90 / 10</strong></div>
+            <p class="market-footnote">Orb prices increase with rarity. Procyon Orb is the rarest market find.</p>
+          </section>
+          <button class="reset-link" id="reset-game" type="button">Reset game data</button>
+        </aside>
+      </section>
+    </main>
+
+    <footer><span>ORB EXCHANGE</span><span>GOOD LUCK OUT THERE</span></footer>
+  </div>
+
+  <dialog class="gacha-dialog" id="gacha-dialog" aria-labelledby="gacha-dialog-title">
+    <div class="dialog-header">
+      <div><p class="eyebrow">CHOOSE YOUR ODDS</p><h2 id="gacha-dialog-title">Gacha market</h2></div>
+      <button class="close-button" id="close-gachas" type="button" aria-label="Close gacha selector">×</button>
+    </div>
+    <div class="gacha-options" id="gacha-options"></div>
+  </dialog>
+
+  <dialog class="confirm-dialog" id="reset-dialog" aria-labelledby="reset-title">
+    <div class="confirm-content">
+      <p class="eyebrow">START OVER</p>
+      <h2 id="reset-title">Reset your market?</h2>
+      <p>This clears your coins, collection, and roll history. You’ll start again with 5,000 coins.</p>
+      <div class="confirm-actions"><button class="button button-quiet" id="cancel-reset" type="button">Keep playing</button><button class="button button-danger" id="confirm-reset" type="button">Reset data</button></div>
+    </div>
+  </dialog>
+</body>
+</html>
