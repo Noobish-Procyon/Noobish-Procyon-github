@@ -9,6 +9,52 @@ const rarities = [
   { id: 'oneOfAKind', name: 'One of a Kind', short: '1oAK', color: '#fff1a8', sell: 0, orbs: ['Winter Triangle', 'Procyon Orb'] }
 ];
 
+const orbArt = {
+  Bland: { symbol: '·', color: '#aeb7ae', accent: '#eef3e9' },
+  Rotating: { symbol: '↻', color: '#55c9b7', accent: '#cafff2' },
+  Kilogram: { symbol: 'kg', color: '#aa926c', accent: '#f3dfad' },
+  Sand: { symbol: '≋', color: '#d4b56b', accent: '#fff0bd' },
+  Energy: { symbol: '✦', color: '#f1d74b', accent: '#fff9be' },
+  Smoke: { symbol: '≋', color: '#9da7aa', accent: '#f1f5f3' },
+  Shadow: { symbol: '◐', color: '#504d75', accent: '#c8c2ff' },
+  Fire: { symbol: '♨', color: '#f2633c', accent: '#ffe08b' },
+  Frost: { symbol: '❄', color: '#70cce8', accent: '#e2fbff' },
+  Magnet: { symbol: '∩', color: '#e45c65', accent: '#b3dcff' },
+  Sound: { symbol: ')))', color: '#65a8dc', accent: '#d5f3ff' },
+  Wind: { symbol: '〰', color: '#8bd6c6', accent: '#e0fff5' },
+  Glass: { symbol: '◇', color: '#91dbe1', accent: '#efffff' },
+  Exploding: { symbol: '✹', color: '#f47745', accent: '#fff1a1' },
+  Photon: { symbol: '✦', color: '#f6e587', accent: '#ffffff' },
+  Dark: { symbol: '●', color: '#343047', accent: '#b7a4ee' },
+  Magma: { symbol: '⌁', color: '#d94d38', accent: '#ffbd54' },
+  Blizzard: { symbol: '❅', color: '#9cdaeb', accent: '#ffffff' },
+  Song: { symbol: '♫', color: '#cb83d9', accent: '#ffe0fa' },
+  Pi: { symbol: 'π', color: '#6fc9ae', accent: '#d7ffcb' },
+  Chrono: { symbol: '◷', color: '#e5bd68', accent: '#fff0ac' },
+  Poison: { symbol: '☣', color: '#86c34d', accent: '#e5ff9c' },
+  Water: { symbol: '◡', color: '#438fda', accent: '#b8f2ff' },
+  Storm: { symbol: 'ϟ', color: '#5578d9', accent: '#fff285' },
+  Meteor: { symbol: '☄', color: '#e98a50', accent: '#ffe1a0' },
+  Rift: { symbol: '◉', color: '#9c65d4', accent: '#f2c1ff' },
+  Nebula: { symbol: '✺', color: '#d166a2', accent: '#ffd0f0' },
+  Prism: { symbol: '◈', color: '#68b9ce', accent: '#fff3a4' },
+  'Summer Triangle': { symbol: '△', color: '#7892da', accent: '#fff4bb' },
+  Solar: { symbol: '☼', color: '#e8a83e', accent: '#fff5a5' },
+  Lunarink: { symbol: '☾', color: '#555b93', accent: '#d8d0ff' },
+  Gas: { symbol: '°', color: '#76c8a8', accent: '#d3ffdd' },
+  Angel: { symbol: '⋈', color: '#e4d9bd', accent: '#ffffff' },
+  Celestial: { symbol: '✧', color: '#8ea8e8', accent: '#fff7c9' },
+  Cyborg: { symbol: '▦', color: '#58bbb6', accent: '#c7fff1' },
+  Demon: { symbol: '♆', color: '#b34b61', accent: '#ffb9a6' },
+  Algebra: { symbol: '∑', color: '#79bf59', accent: '#e5ff9b' },
+  Warp: { symbol: '∞', color: '#ab71d7', accent: '#ffd3ff' },
+  Dino: { symbol: '◖', color: '#7eaa4b', accent: '#e9ff99' },
+  Phoenix: { symbol: '♨', color: '#ea653e', accent: '#ffdc69' },
+  Disco: { symbol: '✺', color: '#e46ebd', accent: '#a8fff0' },
+  'Winter Triangle': { symbol: '❄', color: '#93cae8', accent: '#ffffff' },
+  'Procyon Orb': { symbol: '✶', color: '#fff0a1', accent: '#ffffff' }
+};
+
 const gachas = [
   { id: 'copper', name: 'Copper', cost: 100, tier: 'STARTER SERIES', description: 'A first step into the orb market. Every rarity is in play.', odds: [50, 25, 12.5, 6.25, 3.125, 1.5, 1, .625] },
   { id: 'iron', name: 'Iron', cost: 1000, tier: 'FOR THE DEDICATED', description: 'Better odds for the rarities worth chasing.', odds: [45, 25, 12, 7, 4, 4, 2, 1] },
@@ -53,6 +99,20 @@ function formatCoins(value) {
 function getOrbPrice(rarity, orbName) {
   if (rarity.id === 'oneOfAKind') return orbName === 'Winter Triangle' ? 200000 : 600000;
   return rarity.sell;
+}
+
+function createOrbToken(name, rarity) {
+  const art = orbArt[name] || { symbol: '✦', color: rarity.color, accent: '#ffffff' };
+  const token = document.createElement('span');
+  token.className = `orb-token${name === 'Storm' ? ' orb-token--storm' : ''}`;
+  token.style.setProperty('--orb-color', art.color);
+  token.style.setProperty('--orb-accent', art.accent);
+  token.setAttribute('aria-hidden', 'true');
+  const symbol = document.createElement('span');
+  symbol.className = 'orb-symbol';
+  symbol.textContent = art.symbol;
+  token.append(symbol);
+  return token;
 }
 
 function loadGame() {
@@ -157,10 +217,7 @@ function renderInventory() {
     if (!rarity) return;
     const card = document.createElement('article');
     card.className = 'orb-card';
-    const token = document.createElement('span');
-    token.className = 'orb-token';
-    token.style.setProperty('--rarity-color', rarity.color);
-    token.setAttribute('aria-hidden', 'true');
+    const token = createOrbToken(item.name, rarity);
     const details = document.createElement('div');
     details.className = 'orb-details';
     const title = document.createElement('h4');
@@ -203,10 +260,7 @@ function renderLastPull() {
     return;
   }
   const rarity = rarities.find(item => item.id === state.lastPull.rarity);
-  const token = document.createElement('span');
-  token.className = 'orb-token';
-  token.style.setProperty('--rarity-color', rarity.color);
-  token.setAttribute('aria-hidden', 'true');
+  const token = createOrbToken(state.lastPull.name, rarity);
   const title = document.createElement('p');
   title.textContent = state.lastPull.name;
   const detail = document.createElement('span');
