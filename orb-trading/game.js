@@ -6,7 +6,7 @@ const rarities = [
   { id: 'legendary', name: 'Legendary', short: 'L', color: '#f2bd61', sell: 10000, orbs: ['Chrono', 'Poison', 'Water', 'Storm', 'Meteor', 'Rift', 'Nebula'] },
   { id: 'mythic', name: 'Mythic', short: 'M', color: '#f1819c', sell: 24000, orbs: ['Prism', 'Summer Triangle', 'Solar', 'Lunarink', 'Gas', 'Angel', 'Celestial'] },
   { id: 'transcendent', name: 'Transcendent', short: 'T', color: '#d0ef70', sell: 60000, orbs: ['Cyborg', 'Demon', 'Algebra', 'Warp', 'Dino', 'Phoenix', 'Disco'] },
-  { id: 'oneOfAKind', name: 'One of a Kind', short: '1oAK', color: '#fff1a8', sell: 0, orbs: ['Winter Triangle', 'Procyon Orb'] }
+  { id: 'oneOfAKind', name: 'One of a Kind', short: '1oAK', color: '#fff1a8', sell: 0, orbs: ['Winter Triangle', 'Flame and Frost', 'Procyon Orb'] }
 ];
 
 const knownOrbNames = new Set(rarities.flatMap(rarity => rarity.orbs));
@@ -14,7 +14,7 @@ const journalMilestones = [
   { id: 'discover-5', total: 5, gems: 1 },
   { id: 'discover-15', total: 15, gems: 2 },
   { id: 'discover-30', total: 30, gems: 5 },
-  { id: 'discover-all', total: 43, gems: 10 }
+  { id: 'discover-all', total: 44, gems: 10 }
 ];
 const dailyContractTemplates = [
   { id: 'spin-three', title: 'Spin Cycle', description: 'Roll any gacha 3 times', event: 'roll', target: 3, reward: { coins: 500 } },
@@ -68,6 +68,7 @@ const orbSellPrices = {
   Phoenix: 75000,
   Disco: 78000,
   'Winter Triangle': 200000,
+  'Flame and Frost': 400000,
   'Procyon Orb': 600000
 };
 
@@ -114,6 +115,7 @@ const orbArt = {
   Phoenix: { symbol: '♨', color: '#ea653e', accent: '#ffdc69' },
   Disco: { symbol: '✺', color: '#e46ebd', accent: '#a8fff0' },
   'Winter Triangle': { symbol: '❄', color: '#93cae8', accent: '#c5f0ff' },
+  'Flame and Frost': { symbol: '✧', color: '#f28743', accent: '#b8e9ff' },
   'Procyon Orb': { symbol: '✶', color: '#fff0a1', accent: '#fff1a1' }
 };
 
@@ -133,7 +135,7 @@ const gachas = [
   { id: 'legendaryOnly', name: 'Legendary Only', cost: 8000, tier: 'RARITY LOCKED', description: 'Every roll is guaranteed to be Legendary.', odds: [0, 0, 0, 0, 100, 0, 0, 0] },
   { id: 'mythicOnly', name: 'Mythic Only', cost: 20000, tier: 'RARITY LOCKED', description: 'Every roll is guaranteed to be Mythic.', odds: [0, 0, 0, 0, 0, 100, 0, 0] },
   { id: 'transcendentOnly', name: 'Transcendent Only', cost: 60000, tier: 'RARITY LOCKED', description: 'Every roll is guaranteed to be Transcendent.', odds: [0, 0, 0, 0, 0, 0, 100, 0] },
-  { id: 'oneOfAKindOnly', name: 'One of a Kind Only', cost: 200000, tier: 'RARITY LOCKED', description: 'Every roll is One of a Kind. Winter Triangle is still 90% of the pool.', odds: [0, 0, 0, 0, 0, 0, 0, 100] }
+  { id: 'oneOfAKindOnly', name: 'One of a Kind Only', cost: 200000, tier: 'RARITY LOCKED', description: 'Every roll is One of a Kind: 60% Winter Triangle, 30% Flame and Frost, 10% Procyon Orb.', odds: [0, 0, 0, 0, 0, 0, 0, 100] }
 ];
 
 const npcTrades = [
@@ -329,7 +331,7 @@ function generateStock() {
     });
   });
   if (Math.random() < stockOdds.oneOfAKind) {
-    const uniqueOrb = Math.random() < .9 ? 'Winter Triangle' : 'Procyon Orb';
+    const uniqueOrb = rollOneOfAKind();
     stock[uniqueOrb] = true;
   }
   return stock;
@@ -338,7 +340,7 @@ function generateStock() {
 function createOrbToken(name, rarity) {
   const art = orbArt[name] || { symbol: '✦', color: rarity.color, accent: '#ffffff' };
   const token = document.createElement('span');
-  token.className = `orb-token${name === 'Storm' ? ' orb-token--storm' : ''}${rarity.id === 'oneOfAKind' ? ' orb-token--one-of-a-kind' : ''}`;
+  token.className = `orb-token${name === 'Storm' ? ' orb-token--storm' : ''}${rarity.id === 'oneOfAKind' ? ' orb-token--one-of-a-kind' : ''}${name === 'Flame and Frost' ? ' orb-token--flame-frost' : ''}`;
   token.style.setProperty('--orb-color', art.color);
   token.style.setProperty('--orb-accent', art.accent);
   token.setAttribute('aria-hidden', 'true');
@@ -917,9 +919,16 @@ function rollRarity() {
 
 function rollOrb(rarity) {
   if (rarity.id === 'oneOfAKind') {
-    return Math.random() < .9 ? 'Winter Triangle' : 'Procyon Orb';
+    return rollOneOfAKind();
   }
   return rarity.orbs[Math.floor(Math.random() * rarity.orbs.length)];
+}
+
+function rollOneOfAKind() {
+  const roll = Math.random();
+  if (roll < .6) return 'Winter Triangle';
+  if (roll < .9) return 'Flame and Frost';
+  return 'Procyon Orb';
 }
 
 function makeTrade(tradeIndex) {
