@@ -125,7 +125,15 @@ const gachas = [
   { id: 'platinum', name: 'Platinum', cost: 25000, tier: 'PREMIUM SERIES', description: 'A refined mix, with a stronger pull toward rare finds.', odds: [25, 20, 7.5, 10, 12.5, 12.5, 7.5, 5] },
   { id: 'diamond', name: 'Diamond', cost: 50000, tier: 'BRILLIANT ODDS', description: 'Rare is common here. The biggest finds still take luck.', odds: [20, 20, 20, 10, 12, 7, 6, 5] },
   { id: 'iridium', name: 'Iridium', cost: 100000, tier: 'ULTRA SERIES', description: 'The odds lean hard toward transcendent and mythic orbs.', odds: [2, 4, 6, 10, 18, 20, 25, 15] },
-  { id: 'bigBang', name: 'Big Bang', cost: 1000000, tier: 'ENDGAME SERIES', description: 'No common, uncommon, or rare pulls. Just cosmic stakes.', odds: [0, 0, 0, 1, 2, 12, 40, 45] }
+  { id: 'bigBang', name: 'Big Bang', cost: 1000000, tier: 'ENDGAME SERIES', description: 'No common, uncommon, or rare pulls. Just cosmic stakes.', odds: [0, 0, 0, 1, 2, 12, 40, 45] },
+  { id: 'commonOnly', name: 'Common Only', cost: 150, tier: 'RARITY LOCKED', description: 'Every roll is guaranteed to be Common.', odds: [100, 0, 0, 0, 0, 0, 0, 0] },
+  { id: 'uncommonOnly', name: 'Uncommon Only', cost: 350, tier: 'RARITY LOCKED', description: 'Every roll is guaranteed to be Uncommon.', odds: [0, 100, 0, 0, 0, 0, 0, 0] },
+  { id: 'rareOnly', name: 'Rare Only', cost: 800, tier: 'RARITY LOCKED', description: 'Every roll is guaranteed to be Rare.', odds: [0, 0, 100, 0, 0, 0, 0, 0] },
+  { id: 'epicOnly', name: 'Epic Only', cost: 2000, tier: 'RARITY LOCKED', description: 'Every roll is guaranteed to be Epic.', odds: [0, 0, 0, 100, 0, 0, 0, 0] },
+  { id: 'legendaryOnly', name: 'Legendary Only', cost: 8000, tier: 'RARITY LOCKED', description: 'Every roll is guaranteed to be Legendary.', odds: [0, 0, 0, 0, 100, 0, 0, 0] },
+  { id: 'mythicOnly', name: 'Mythic Only', cost: 20000, tier: 'RARITY LOCKED', description: 'Every roll is guaranteed to be Mythic.', odds: [0, 0, 0, 0, 0, 100, 0, 0] },
+  { id: 'transcendentOnly', name: 'Transcendent Only', cost: 60000, tier: 'RARITY LOCKED', description: 'Every roll is guaranteed to be Transcendent.', odds: [0, 0, 0, 0, 0, 0, 100, 0] },
+  { id: 'oneOfAKindOnly', name: 'One of a Kind Only', cost: 200000, tier: 'RARITY LOCKED', description: 'Every roll is One of a Kind. Winter Triangle is still 90% of the pool.', odds: [0, 0, 0, 0, 0, 0, 0, 100] }
 ];
 
 const npcTrades = [
@@ -157,6 +165,7 @@ const saveKey = 'orbTradingSaveV1';
 const elements = {
   balance: document.getElementById('coin-balance'),
   mysticGemBalance: document.getElementById('mystic-gem-balance'),
+  gachaCount: document.getElementById('gacha-count'),
   orbStage: document.getElementById('orb-stage'),
   gachaTitle: document.getElementById('gacha-title'),
   gachaTier: document.getElementById('gacha-tier'),
@@ -795,6 +804,7 @@ function render() {
   elements.boostCurrentRate.textContent = `+${(state.moneyBoosts * .01).toFixed(2)}%`;
   elements.boostLevel.textContent = state.moneyBoosts;
   elements.buyMoneyBoost.disabled = state.mysticGems < 1;
+  elements.gachaCount.textContent = gachas.length;
   elements.orbStage.dataset.gacha = selectedGacha.id;
   elements.gachaTitle.textContent = selectedGacha.name;
   elements.gachaTier.textContent = selectedGacha.tier;
@@ -803,11 +813,20 @@ function render() {
   elements.rollCost.textContent = formatCoins(selectedGacha.cost);
   elements.rollAnimationToggle.checked = state.animateRolls;
   const pityCount = state.pityCounts[selectedGacha.id] || 0;
-  elements.pityCount.textContent = pityCount >= mythicPityLimit
-    ? `${mythicPityLimit} / ${mythicPityLimit} · GUARANTEED NEXT`
-    : `${pityCount} / ${mythicPityLimit} MISSES`;
-  elements.pityTrack.setAttribute('aria-valuenow', Math.min(pityCount, mythicPityLimit));
-  elements.pityFill.style.width = `${Math.min(pityCount, mythicPityLimit) / mythicPityLimit * 100}%`;
+  const mythicIndex = rarities.findIndex(rarity => rarity.id === 'mythic');
+  const hasMythicPlusOdds = selectedGacha.odds.slice(mythicIndex).some(chance => chance > 0);
+  const hasLowerRarityOdds = selectedGacha.odds.slice(0, mythicIndex).some(chance => chance > 0);
+  const pityApplies = hasMythicPlusOdds && hasLowerRarityOdds;
+  elements.pityCount.textContent = !hasMythicPlusOdds
+    ? 'N/A · NO MYTHIC+'
+    : !hasLowerRarityOdds
+      ? 'ALWAYS MYTHIC+'
+      : pityCount >= mythicPityLimit
+        ? `${mythicPityLimit} / ${mythicPityLimit} · GUARANTEED NEXT`
+        : `${pityCount} / ${mythicPityLimit} MISSES`;
+  const displayedPity = pityApplies ? Math.min(pityCount, mythicPityLimit) : 0;
+  elements.pityTrack.setAttribute('aria-valuenow', displayedPity);
+  elements.pityFill.style.width = `${displayedPity / mythicPityLimit * 100}%`;
   elements.rollButton.disabled = isRolling || state.coins < selectedGacha.cost;
   elements.rollMessage.classList.remove('error');
   elements.rollMessage.textContent = state.coins < selectedGacha.cost
@@ -865,9 +884,11 @@ function updateStockCountdown() {
 function rollRarity() {
   const pityCount = state.pityCounts[selectedGacha.id] || 0;
   const mythicIndex = rarities.findIndex(rarity => rarity.id === 'mythic');
-  if (pityCount >= mythicPityLimit) {
-    const eligibleOdds = selectedGacha.odds.slice(mythicIndex);
-    const eligibleTotal = eligibleOdds.reduce((total, chance) => total + chance, 0);
+  const eligibleOdds = selectedGacha.odds.slice(mythicIndex);
+  const eligibleTotal = eligibleOdds.reduce((total, chance) => total + chance, 0);
+  const hasLowerRarityOdds = selectedGacha.odds.slice(0, mythicIndex).some(chance => chance > 0);
+  const pityApplies = eligibleTotal > 0 && hasLowerRarityOdds;
+  if (pityApplies && pityCount >= mythicPityLimit) {
     const pityRoll = Math.random() * eligibleTotal;
     let eligibleThreshold = 0;
     for (let index = mythicIndex; index < rarities.length; index += 1) {
@@ -886,11 +907,11 @@ function rollRarity() {
   for (let index = 0; index < selectedGacha.odds.length; index += 1) {
     threshold += selectedGacha.odds[index];
     if (roll < threshold) {
-      state.pityCounts[selectedGacha.id] = index >= mythicIndex ? 0 : pityCount + 1;
+      state.pityCounts[selectedGacha.id] = pityApplies && index < mythicIndex ? pityCount + 1 : 0;
       return rarities[index];
     }
   }
-  state.pityCounts[selectedGacha.id] = pityCount + 1;
+  state.pityCounts[selectedGacha.id] = pityApplies ? pityCount + 1 : 0;
   return rarities[rarities.length - 1];
 }
 
