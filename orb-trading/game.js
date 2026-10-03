@@ -167,6 +167,8 @@ const elements = {
 
 let state = loadGame();
 let selectedGacha = gachas.find(gacha => gacha.id === state.selectedGacha) || gachas[0];
+let isRolling = false;
+let rollAnimationId = 0;
 
 function formatCoins(value) {
   return Math.floor(value).toLocaleString('en-US');
@@ -353,7 +355,7 @@ function renderInventory() {
 
 function renderLastPull() {
   elements.pullNumber.textContent = `#${String(state.rolls).padStart(3, '0')}`;
-  elements.lastPull.classList.remove('has-pull');
+  elements.lastPull.classList.remove('has-pull', 'is-rolling');
   elements.lastPull.replaceChildren();
   if (!state.lastPull) {
     const placeholder = document.createElement('div');
@@ -513,7 +515,7 @@ function render() {
   elements.gachaDescription.textContent = selectedGacha.description;
   elements.rollName.textContent = selectedGacha.name;
   elements.rollCost.textContent = formatCoins(selectedGacha.cost);
-  elements.rollButton.disabled = state.coins < selectedGacha.cost;
+  elements.rollButton.disabled = isRolling || state.coins < selectedGacha.cost;
   elements.rollMessage.classList.remove('error');
   elements.rollMessage.textContent = state.coins < selectedGacha.cost
     ? `You need ¢ ${formatCoins(selectedGacha.cost - state.coins)} more to roll this gacha.`
@@ -605,8 +607,42 @@ function makeTrade(tradeIndex) {
   elements.tradeMessage.textContent = `${trade.npc} traded your ${trade.count} ${rarities.find(rarity => rarity.id === trade.give).name} orbs for ${rewardName} · ${rewardRarity.name}!`;
 }
 
+function animateLastPull(result, animationId) {
+  const duration = 2900;
+  const startTime = performance.now();
+  let nextChange = startTime;
+  elements.lastPull.classList.add('is-rolling');
+
+  function animate(now) {
+    if (animationId !== rollAnimationId) return;
+    const progress = Math.min(1, (now - startTime) / duration);
+    if (progress >= 1) {
+      isRolling = false;
+      render();
+      elements.rollMessage.textContent = `You found ${result.name} · ${rarities.find(item => item.id === result.rarity).name}!`;
+      return;
+    }
+
+    if (now >= nextChange) {
+      const rarity = rarities[Math.floor(Math.random() * rarities.length)];
+      const name = rarity.orbs[Math.floor(Math.random() * rarity.orbs.length)];
+      const token = createOrbToken(name, rarity);
+      token.classList.add('rolling-orb');
+      elements.lastPull.querySelector('.orb-token')?.replaceWith(token);
+      elements.lastPull.querySelector('p').textContent = name;
+      elements.lastPull.lastElementChild.textContent = `${rarity.name} · sells for ¢ ${formatCoins(getOrbPrice(rarity, name))}`;
+      nextChange = now + 45 + 620 * progress ** 3;
+    }
+
+    requestAnimationFrame(animate);
+  }
+
+  requestAnimationFrame(animate);
+}
+
 function roll() {
-  if (state.coins < selectedGacha.cost) return;
+  if (isRolling || state.coins < selectedGacha.cost) return;
+  isRolling = true;
   state.coins -= selectedGacha.cost;
   const rarity = rollRarity();
   const name = rollOrb(rarity);
@@ -617,7 +653,9 @@ function roll() {
   saveGame();
   render();
   elements.rollMessage.classList.remove('error');
-  elements.rollMessage.textContent = `You found ${name} · ${rarity.name}!`;
+  elements.rollMessage.textContent = 'Rolling...';
+  rollAnimationId += 1;
+  animateLastPull(result, rollAnimationId);
 }
 
 function sellOrb(rarityId, name) {
@@ -646,6 +684,8 @@ function sellAll() {
 }
 
 function resetGame() {
+  rollAnimationId += 1;
+  isRolling = false;
   state = { coins: initialCoins, inventory: [], rolls: 0, tradeCount: 0, stock: generateStock(), stockRefreshAt: Date.now() + stockCycleMs, lastPull: null, selectedGacha: 'copper' };
   selectedGacha = gachas[0];
   saveGame();

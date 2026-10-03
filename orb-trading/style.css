@@ -191,6 +191,8 @@ h2 { margin-bottom: 0; font-size: 20px; line-height: 1.2; }
 .last-pull-content p { margin: 0 0 5px; color: var(--paper); font-size: 12px; }
 .last-pull-content > span { max-width: 190px; color: var(--quiet); font-size: 10px; line-height: 1.5; }
 .last-pull-content.has-pull { animation: card-in 300ms ease-out both; }
+.last-pull-content.is-rolling { animation: none; }
+.last-pull-content .rolling-orb { animation: orb-roll-tick 120ms cubic-bezier(.16,.75,.35,1.35); }
 .last-pull-content .orb-token { width: 65px; margin-bottom: 13px; }
 .last-pull-content .orb-token::after { top: 11px; left: 14px; width: 13px; height: 7px; }
 .last-pull-content .orb-symbol { font-size: 29px; }
@@ -235,6 +237,7 @@ footer { display: flex; justify-content: space-between; gap: 16px; margin-top: 2
 @keyframes float { 0%, 100% { transform: translateY(0) rotate(-7deg); } 50% { transform: translateY(-7px) rotate(6deg); } }
 @keyframes gacha-aura { 0%, 100% { opacity: .55; transform: scale(.94); box-shadow: 0 0 9px 2px rgba(143, 238, 119, .42); } 50% { opacity: 1; transform: scale(1.16); box-shadow: 0 0 18px 6px rgba(143, 238, 119, .78); } }
 @keyframes card-in { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes orb-roll-tick { from { opacity: .7; filter: blur(1px); transform: scale(.72) rotate(-24deg); } to { opacity: 1; filter: blur(0); transform: scale(1) rotate(0); } }
 @keyframes storm-orbit { to { transform: rotate(360deg); } }
 @keyframes one-of-a-kind-pulse { 0%, 100% { opacity: .55; transform: scale(.92); box-shadow: 0 0 5px 1px color-mix(in srgb, var(--orb-accent), transparent 70%); } 50% { opacity: 1; transform: scale(1.12); box-shadow: 0 0 13px 4px color-mix(in srgb, var(--orb-accent), transparent 42%); } }
 
