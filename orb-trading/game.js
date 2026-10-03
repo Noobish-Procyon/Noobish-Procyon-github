@@ -9,6 +9,52 @@ const rarities = [
   { id: 'oneOfAKind', name: 'One of a Kind', short: '1oAK', color: '#fff1a8', sell: 0, orbs: ['Winter Triangle', 'Procyon Orb'] }
 ];
 
+const orbSellPrices = {
+  Bland: 150,
+  Rotating: 175,
+  Kilogram: 200,
+  Sand: 350,
+  Energy: 400,
+  Smoke: 450,
+  Shadow: 500,
+  Fire: 800,
+  Frost: 900,
+  Magnet: 1000,
+  Sound: 1100,
+  Wind: 1200,
+  Glass: 4000,
+  Exploding: 4300,
+  Photon: 4600,
+  Dark: 4900,
+  Magma: 5200,
+  Blizzard: 5500,
+  Song: 5800,
+  Pi: 6100,
+  Chrono: 10000,
+  Poison: 10500,
+  Water: 11000,
+  Storm: 11500,
+  Meteor: 12000,
+  Rift: 12500,
+  Nebula: 13000,
+  Prism: 24000,
+  'Summer Triangle': 25500,
+  Solar: 27000,
+  Lunarink: 28500,
+  Gas: 30000,
+  Angel: 31500,
+  Celestial: 33000,
+  Cyborg: 60000,
+  Demon: 63000,
+  Algebra: 66000,
+  Warp: 69000,
+  Dino: 72000,
+  Phoenix: 75000,
+  Disco: 78000,
+  'Winter Triangle': 200000,
+  'Procyon Orb': 600000
+};
+
 const orbArt = {
   Bland: { symbol: '·', color: '#aeb7ae', accent: '#eef3e9' },
   Rotating: { symbol: '↻', color: '#55c9b7', accent: '#cafff2' },
@@ -76,6 +122,17 @@ const npcTrades = [
   { npc: 'Wayfarer', title: 'Beyond the Veil', note: 'Two transcendent orbs. One impossible prize.', give: 'transcendent', count: 2, get: 'oneOfAKind', color: '#efe0a0' }
 ];
 
+const stockOdds = {
+  common: .68,
+  uncommon: .52,
+  rare: .36,
+  epic: .24,
+  legendary: .15,
+  mythic: .08,
+  transcendent: .04,
+  oneOfAKind: .025
+};
+const stockCycleMs = 3 * 60 * 1000;
 const initialCoins = 5000;
 const saveKey = 'orbTradingSaveV1';
 const elements = {
@@ -96,6 +153,10 @@ const elements = {
   tradeCount: document.getElementById('trade-count'),
   tradeMessage: document.getElementById('trade-message'),
   tradingDialog: document.getElementById('trading-dialog'),
+  stockDialog: document.getElementById('stock-dialog'),
+  stockList: document.getElementById('stock-list'),
+  stockCountdown: document.getElementById('stock-countdown'),
+  stockMessage: document.getElementById('stock-message'),
   sellAll: document.getElementById('sell-all'),
   lastPull: document.getElementById('last-pull-content'),
   pullNumber: document.getElementById('pull-number'),
@@ -112,8 +173,29 @@ function formatCoins(value) {
 }
 
 function getOrbPrice(rarity, orbName) {
-  if (rarity.id === 'oneOfAKind') return orbName === 'Winter Triangle' ? 200000 : 600000;
-  return rarity.sell;
+  return orbSellPrices[orbName] ?? rarity.sell;
+}
+
+function getStockPrice(rarity, orbName) {
+  return Math.floor(getOrbPrice(rarity, orbName) * .75);
+}
+
+function createEmptyStock() {
+  return Object.fromEntries(rarities.flatMap(rarity => rarity.orbs.map(name => [name, false])));
+}
+
+function generateStock() {
+  const stock = createEmptyStock();
+  rarities.filter(rarity => rarity.id !== 'oneOfAKind').forEach(rarity => {
+    rarity.orbs.forEach(name => {
+      stock[name] = Math.random() < stockOdds[rarity.id];
+    });
+  });
+  if (Math.random() < stockOdds.oneOfAKind) {
+    const uniqueOrb = Math.random() < .9 ? 'Winter Triangle' : 'Procyon Orb';
+    stock[uniqueOrb] = true;
+  }
+  return stock;
 }
 
 function createOrbToken(name, rarity) {
@@ -134,11 +216,20 @@ function loadGame() {
   try {
     const saved = JSON.parse(localStorage.getItem(saveKey));
     if (saved && Number.isFinite(saved.coins) && Array.isArray(saved.inventory)) {
+      const stock = createEmptyStock();
+      const hasSavedStock = saved.stock && typeof saved.stock === 'object' && !Array.isArray(saved.stock);
+      if (hasSavedStock) {
+        Object.keys(stock).forEach(name => { stock[name] = saved.stock[name] === true; });
+      } else {
+        Object.assign(stock, generateStock());
+      }
       return {
         coins: Math.max(0, saved.coins),
         inventory: saved.inventory.filter(item => item && typeof item.name === 'string' && typeof item.rarity === 'string'),
         rolls: Math.max(0, Number(saved.rolls) || 0),
         tradeCount: Math.max(0, Number(saved.tradeCount) || 0),
+        stock,
+        stockRefreshAt: Number.isFinite(saved.stockRefreshAt) ? saved.stockRefreshAt : Date.now() + stockCycleMs,
         lastPull: saved.lastPull || null,
         selectedGacha: saved.selectedGacha || 'copper'
       };
@@ -146,7 +237,7 @@ function loadGame() {
   } catch (error) {
     console.warn('Could not load Orb Trading save.', error);
   }
-  return { coins: initialCoins, inventory: [], rolls: 0, tradeCount: 0, lastPull: null, selectedGacha: 'copper' };
+  return { coins: initialCoins, inventory: [], rolls: 0, tradeCount: 0, stock: generateStock(), stockRefreshAt: Date.now() + stockCycleMs, lastPull: null, selectedGacha: 'copper' };
 }
 
 function saveGame() {
@@ -225,9 +316,9 @@ function renderInventory() {
   });
 
   const rarityById = new Map(rarities.map(rarity => [rarity.id, rarity]));
-  const sortValue = rarityId => rarityId === 'oneOfAKind' ? Number.MAX_SAFE_INTEGER : rarityById.get(rarityId)?.sell || 0;
+  const sortValue = item => getOrbPrice(rarityById.get(item.rarity), item.name);
   [...grouped.values()].sort((a, b) => {
-    const rarityOrder = sortValue(b.rarity) - sortValue(a.rarity);
+    const rarityOrder = sortValue(b) - sortValue(a);
     return rarityOrder || a.name.localeCompare(b.name);
   }).forEach(item => {
     const rarity = rarityById.get(item.rarity);
@@ -284,6 +375,64 @@ function renderLastPull() {
   detail.textContent = `${rarity.name} · sells for ¢ ${formatCoins(getOrbPrice(rarity, state.lastPull.name))}`;
   elements.lastPull.append(token, title, detail);
   elements.lastPull.classList.add('has-pull');
+}
+
+function formatStockTimer(milliseconds) {
+  const totalSeconds = Math.max(0, Math.ceil(milliseconds / 1000));
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+}
+
+function renderStock() {
+  if (state.stockRefreshAt <= Date.now()) {
+    state.stock = generateStock();
+    state.stockRefreshAt = Date.now() + stockCycleMs;
+    saveGame();
+  }
+  elements.stockCountdown.textContent = `RESTOCK IN ${formatStockTimer(state.stockRefreshAt - Date.now())}`;
+  elements.stockList.replaceChildren();
+
+  rarities.forEach(rarity => {
+    const section = document.createElement('section');
+    section.className = 'stock-tier';
+    const header = document.createElement('div');
+    header.className = 'stock-tier-header';
+    const title = document.createElement('h3');
+    title.textContent = rarity.name;
+    const availableCount = rarity.orbs.filter(name => state.stock[name]).length;
+    const count = document.createElement('span');
+    count.textContent = `${availableCount}/${rarity.orbs.length} IN STOCK`;
+    header.append(title, count);
+    const grid = document.createElement('div');
+    grid.className = 'stock-items';
+
+    rarity.orbs.forEach(name => {
+      const available = state.stock[name] === true;
+      const price = getStockPrice(rarity, name);
+      const card = document.createElement('article');
+      card.className = `stock-item${available ? ' stock-item-available' : ''}`;
+      const token = createOrbToken(name, rarity);
+      const details = document.createElement('div');
+      details.className = 'stock-item-details';
+      const orbName = document.createElement('strong');
+      orbName.textContent = name;
+      const status = document.createElement('span');
+      status.textContent = available ? 'IN STOCK' : 'OUT OF STOCK';
+      details.append(orbName, status);
+      const action = document.createElement('button');
+      action.type = 'button';
+      action.className = 'stock-buy-button';
+      action.disabled = !available || state.coins < price;
+      action.textContent = !available ? 'Sold out' : state.coins < price ? `Need ¢${formatCoins(price - state.coins)}` : `Buy · ¢${formatCoins(price)}`;
+      action.addEventListener('click', () => buyStockOrb(name, rarity.id));
+      card.append(token, details, action);
+      grid.append(card);
+    });
+
+    section.append(header, grid);
+    elements.stockList.append(section);
+  });
 }
 
 function renderTrades() {
@@ -372,6 +521,7 @@ function render() {
   renderOdds();
   renderInventory();
   renderTrades();
+  renderStock();
   renderLastPull();
   renderGachaOptions();
 }
@@ -382,6 +532,35 @@ function selectGacha(gacha) {
   saveGame();
   render();
   elements.gachaDialog.close();
+}
+
+function buyStockOrb(name, rarityId) {
+  const rarity = rarities.find(item => item.id === rarityId);
+  if (!rarity || state.stock[name] !== true) return;
+  const price = getStockPrice(rarity, name);
+  if (state.coins < price) return;
+
+  state.coins -= price;
+  state.stock[name] = false;
+  state.inventory.push({ name, rarity: rarity.id, gacha: 'Orb Stock' });
+  saveGame();
+  render();
+  elements.stockMessage.textContent = `Bought ${name} for ¢ ${formatCoins(price)}.`;
+  elements.stockMessage.classList.add('stock-message-success');
+}
+
+function updateStockCountdown() {
+  const remaining = state.stockRefreshAt - Date.now();
+  if (remaining <= 0) {
+    state.stock = generateStock();
+    state.stockRefreshAt = Date.now() + stockCycleMs;
+    saveGame();
+    renderStock();
+    elements.stockMessage.textContent = 'The market has been restocked.';
+    elements.stockMessage.classList.add('stock-message-success');
+    return;
+  }
+  elements.stockCountdown.textContent = `RESTOCK IN ${formatStockTimer(remaining)}`;
 }
 
 function rollRarity() {
@@ -467,7 +646,7 @@ function sellAll() {
 }
 
 function resetGame() {
-  state = { coins: initialCoins, inventory: [], rolls: 0, tradeCount: 0, lastPull: null, selectedGacha: 'copper' };
+  state = { coins: initialCoins, inventory: [], rolls: 0, tradeCount: 0, stock: generateStock(), stockRefreshAt: Date.now() + stockCycleMs, lastPull: null, selectedGacha: 'copper' };
   selectedGacha = gachas[0];
   saveGame();
   render();
@@ -478,6 +657,8 @@ document.getElementById('open-gachas').addEventListener('click', () => elements.
 document.getElementById('close-gachas').addEventListener('click', () => elements.gachaDialog.close());
 document.getElementById('open-trading').addEventListener('click', () => elements.tradingDialog.showModal());
 document.getElementById('close-trading').addEventListener('click', () => elements.tradingDialog.close());
+document.getElementById('open-stock').addEventListener('click', () => elements.stockDialog.showModal());
+document.getElementById('close-stock').addEventListener('click', () => elements.stockDialog.close());
 elements.rollButton.addEventListener('click', roll);
 elements.sellAll.addEventListener('click', sellAll);
 document.getElementById('reset-game').addEventListener('click', () => elements.resetDialog.showModal());
@@ -489,8 +670,12 @@ elements.gachaDialog.addEventListener('click', event => {
 elements.tradingDialog.addEventListener('click', event => {
   if (event.target === elements.tradingDialog) elements.tradingDialog.close();
 });
+elements.stockDialog.addEventListener('click', event => {
+  if (event.target === elements.stockDialog) elements.stockDialog.close();
+});
 elements.resetDialog.addEventListener('click', event => {
   if (event.target === elements.resetDialog) elements.resetDialog.close();
 });
 
 render();
+window.setInterval(updateStockCountdown, 1000);
