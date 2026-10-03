@@ -9,6 +9,22 @@ const rarities = [
   { id: 'oneOfAKind', name: 'One of a Kind', short: '1oAK', color: '#fff1a8', sell: 0, orbs: ['Winter Triangle', 'Procyon Orb'] }
 ];
 
+const knownOrbNames = new Set(rarities.flatMap(rarity => rarity.orbs));
+const journalMilestones = [
+  { id: 'discover-5', total: 5, gems: 1 },
+  { id: 'discover-15', total: 15, gems: 2 },
+  { id: 'discover-30', total: 30, gems: 5 },
+  { id: 'discover-all', total: 43, gems: 10 }
+];
+const dailyContractTemplates = [
+  { id: 'spin-three', title: 'Spin Cycle', description: 'Roll any gacha 3 times', event: 'roll', target: 3, reward: { coins: 500 } },
+  { id: 'sell-five', title: 'Market Regular', description: 'Sell 5 orbs', event: 'sell', target: 5, reward: { coins: 750 } },
+  { id: 'npc-trade', title: 'Good Neighbors', description: 'Complete an NPC trade', event: 'trade', target: 1, reward: { gems: 1 } },
+  { id: 'new-discovery', title: 'Something New', description: 'Discover a new orb', event: 'discover', target: 1, reward: { gems: 1 } },
+  { id: 'stock-buy', title: 'Market Shopper', description: 'Buy an orb from stock', event: 'buy', target: 1, reward: { coins: 500 } },
+  { id: 'rare-sale', title: 'Premium Sale', description: 'Sell a Mythic or rarer orb', event: 'sellRare', target: 1, reward: { gems: 1 } }
+];
+
 const orbSellPrices = {
   Bland: 150,
   Rotating: 175,
@@ -133,10 +149,14 @@ const stockOdds = {
   oneOfAKind: .025
 };
 const stockCycleMs = 3 * 60 * 1000;
+const mysticGemDropChance = .01;
+const moneyBoostPerGem = .0001;
+const mythicPityLimit = 40;
 const initialCoins = 5000;
 const saveKey = 'orbTradingSaveV1';
 const elements = {
   balance: document.getElementById('coin-balance'),
+  mysticGemBalance: document.getElementById('mystic-gem-balance'),
   orbStage: document.getElementById('orb-stage'),
   gachaTitle: document.getElementById('gacha-title'),
   gachaTier: document.getElementById('gacha-tier'),
@@ -147,9 +167,23 @@ const elements = {
   rollAnimationToggle: document.getElementById('roll-animation-toggle'),
   rollMessage: document.getElementById('roll-message'),
   oddsList: document.getElementById('odds-list'),
+  pityCount: document.getElementById('pity-count'),
+  pityTrack: document.getElementById('pity-track'),
+  pityFill: document.getElementById('pity-fill'),
   inventoryGrid: document.getElementById('inventory-grid'),
   inventoryEmpty: document.getElementById('inventory-empty'),
   inventoryCount: document.getElementById('inventory-count'),
+  journalDialog: document.getElementById('journal-dialog'),
+  journalProgressCount: document.getElementById('journal-progress-count'),
+  journalProgressPercent: document.getElementById('journal-progress-percent'),
+  journalProgressTrack: document.getElementById('journal-progress-track'),
+  journalProgressFill: document.getElementById('journal-progress-fill'),
+  journalMessage: document.getElementById('journal-message'),
+  journalMilestoneList: document.getElementById('journal-milestone-list'),
+  journalRarities: document.getElementById('journal-rarities'),
+  dailyContractList: document.getElementById('daily-contract-list'),
+  dailyResetLabel: document.getElementById('daily-reset-label'),
+  sellAllPreview: document.getElementById('sell-all-preview'),
   tradeList: document.getElementById('trade-list'),
   tradeCount: document.getElementById('trade-count'),
   tradeMessage: document.getElementById('trade-message'),
@@ -158,6 +192,12 @@ const elements = {
   stockList: document.getElementById('stock-list'),
   stockCountdown: document.getElementById('stock-countdown'),
   stockMessage: document.getElementById('stock-message'),
+  boostDialog: document.getElementById('boost-dialog'),
+  boostGemBalance: document.getElementById('boost-gem-balance'),
+  boostCurrentRate: document.getElementById('boost-current-rate'),
+  boostLevel: document.getElementById('boost-level'),
+  buyMoneyBoost: document.getElementById('buy-money-boost'),
+  boostMessage: document.getElementById('boost-message'),
   sellAll: document.getElementById('sell-all'),
   lastPull: document.getElementById('last-pull-content'),
   pullNumber: document.getElementById('pull-number'),
@@ -172,7 +212,79 @@ let isRolling = false;
 let rollAnimationId = 0;
 
 function formatCoins(value) {
-  return Math.floor(value).toLocaleString('en-US');
+  return value.toLocaleString('en-US', { maximumFractionDigits: 2 });
+}
+
+function getUtcDay() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function createDailyContracts(discoveredCount = 0) {
+  const available = dailyContractTemplates.filter(contract => contract.event !== 'discover' || discoveredCount < knownOrbNames.size);
+  const day = getUtcDay();
+  let randomSeed = 0;
+  for (const character of day) randomSeed = (randomSeed * 31 + character.charCodeAt(0)) >>> 0;
+  const nextRandom = () => {
+    randomSeed = (1664525 * randomSeed + 1013904223) >>> 0;
+    return randomSeed / 0x100000000;
+  };
+  for (let index = available.length - 1; index > 0; index -= 1) {
+    const swapIndex = Math.floor(nextRandom() * (index + 1));
+    [available[index], available[swapIndex]] = [available[swapIndex], available[index]];
+  }
+  return {
+    day,
+    offers: available.slice(0, 3).map(contract => ({ ...contract, progress: 0, claimed: false }))
+  };
+}
+
+function restoreDailyContracts(savedContracts, discoveredCount) {
+  if (savedContracts?.day === getUtcDay() && Array.isArray(savedContracts.offers) && savedContracts.offers.length === 3) {
+    const offers = savedContracts.offers.filter(offer => dailyContractTemplates.some(template => template.id === offer.id));
+    if (offers.length === 3) {
+      return {
+        day: savedContracts.day,
+        offers: offers.map(offer => ({ ...dailyContractTemplates.find(template => template.id === offer.id), progress: Math.min(dailyContractTemplates.find(template => template.id === offer.id).target, Math.max(0, Number(offer.progress) || 0)), claimed: offer.claimed === true }))
+      };
+    }
+  }
+  return createDailyContracts(discoveredCount);
+}
+
+function advanceDailyContracts(event, amount = 1) {
+  const completed = [];
+  state.dailyContracts.offers.forEach(offer => {
+    if (offer.event !== event || offer.claimed) return;
+    offer.progress = Math.min(offer.target, offer.progress + amount);
+    if (offer.progress < offer.target) return;
+    offer.claimed = true;
+    state.coins += offer.reward.coins || 0;
+    state.mysticGems += offer.reward.gems || 0;
+    completed.push(offer);
+  });
+  return completed;
+}
+
+function getSalePayout(baseAmount) {
+  return Math.round(baseAmount * (1 + state.moneyBoosts * moneyBoostPerGem) * 100) / 100;
+}
+
+function rollMysticGems(orbCount) {
+  let earned = 0;
+  for (let index = 0; index < orbCount; index += 1) {
+    if (Math.random() < mysticGemDropChance) earned += 1;
+  }
+  state.mysticGems += earned;
+  return earned;
+}
+
+function applySale(baseAmount, orbCount, rareOrbCount = 0) {
+  const payout = getSalePayout(baseAmount);
+  const gems = rollMysticGems(orbCount);
+  state.coins = Math.round((state.coins + payout) * 100) / 100;
+  advanceDailyContracts('sell', orbCount);
+  advanceDailyContracts('sellRare', rareOrbCount);
+  return { payout, gems };
 }
 
 function getOrbPrice(rarity, orbName) {
@@ -181,6 +293,19 @@ function getOrbPrice(rarity, orbName) {
 
 function getStockPrice(rarity, orbName) {
   return Math.floor(getOrbPrice(rarity, orbName) * .75);
+}
+
+function isOrbLocked(name) {
+  return state.lockedOrbs.includes(name);
+}
+
+function getUnlockedSalePreview() {
+  const unlocked = state.inventory.filter(item => !isOrbLocked(item.name));
+  const total = unlocked.reduce((sum, item) => {
+    const rarity = rarities.find(entry => entry.id === item.rarity);
+    return sum + (rarity ? getOrbPrice(rarity, item.name) : 0);
+  }, 0);
+  return { count: unlocked.length, payout: getSalePayout(total) };
 }
 
 function createEmptyStock() {
@@ -215,6 +340,13 @@ function createOrbToken(name, rarity) {
   return token;
 }
 
+function createPityCounts(savedCounts = {}) {
+  return Object.fromEntries(gachas.map(gacha => {
+    const count = Math.floor(Number(savedCounts[gacha.id]) || 0);
+    return [gacha.id, Math.max(0, Math.min(mythicPityLimit, count))];
+  }));
+}
+
 function loadGame() {
   try {
     const saved = JSON.parse(localStorage.getItem(saveKey));
@@ -226,11 +358,25 @@ function loadGame() {
       } else {
         Object.assign(stock, generateStock());
       }
+      const inventory = saved.inventory.filter(item => item && typeof item.name === 'string' && typeof item.rarity === 'string');
+      const lockedOrbs = Array.isArray(saved.lockedOrbs) ? [...new Set(saved.lockedOrbs.filter(name => knownOrbNames.has(name)))] : [];
+      const discoveredOrbs = new Set(Array.isArray(saved.discoveredOrbs) ? saved.discoveredOrbs.filter(name => knownOrbNames.has(name)) : []);
+      inventory.forEach(item => { if (knownOrbNames.has(item.name)) discoveredOrbs.add(item.name); });
+      if (saved.lastPull && knownOrbNames.has(saved.lastPull.name)) discoveredOrbs.add(saved.lastPull.name);
+      const dailyContracts = restoreDailyContracts(saved.dailyContracts, discoveredOrbs.size);
+      const pityCounts = createPityCounts(saved.pityCounts);
       return {
         coins: Math.max(0, saved.coins),
-        inventory: saved.inventory.filter(item => item && typeof item.name === 'string' && typeof item.rarity === 'string'),
+        inventory,
+        lockedOrbs,
         rolls: Math.max(0, Number(saved.rolls) || 0),
         tradeCount: Math.max(0, Number(saved.tradeCount) || 0),
+        mysticGems: Math.max(0, Math.floor(Number(saved.mysticGems) || 0)),
+        moneyBoosts: Math.max(0, Math.floor(Number(saved.moneyBoosts) || 0)),
+        discoveredOrbs: [...discoveredOrbs],
+        claimedJournalMilestones: Array.isArray(saved.claimedJournalMilestones) ? saved.claimedJournalMilestones.filter(id => journalMilestones.some(milestone => milestone.id === id)) : [],
+        dailyContracts,
+        pityCounts,
         animateRolls: saved.animateRolls !== false,
         stock,
         stockRefreshAt: Number.isFinite(saved.stockRefreshAt) ? saved.stockRefreshAt : Date.now() + stockCycleMs,
@@ -241,7 +387,7 @@ function loadGame() {
   } catch (error) {
     console.warn('Could not load Orb Trading save.', error);
   }
-  return { coins: initialCoins, inventory: [], rolls: 0, tradeCount: 0, animateRolls: true, stock: generateStock(), stockRefreshAt: Date.now() + stockCycleMs, lastPull: null, selectedGacha: 'copper' };
+  return { coins: initialCoins, inventory: [], lockedOrbs: [], rolls: 0, tradeCount: 0, mysticGems: 0, moneyBoosts: 0, discoveredOrbs: [], claimedJournalMilestones: [], dailyContracts: createDailyContracts(), pityCounts: createPityCounts(), animateRolls: true, stock: generateStock(), stockRefreshAt: Date.now() + stockCycleMs, lastPull: null, selectedGacha: 'copper' };
 }
 
 function saveGame() {
@@ -309,7 +455,9 @@ function renderInventory() {
   const count = state.inventory.length;
   elements.inventoryCount.textContent = count;
   elements.inventoryEmpty.hidden = count > 0;
-  elements.sellAll.disabled = count === 0;
+  const salePreview = getUnlockedSalePreview();
+  elements.sellAll.disabled = salePreview.count === 0;
+  elements.sellAllPreview.textContent = `${salePreview.count} unlocked · ¢ ${formatCoins(salePreview.payout)}`;
 
   const grouped = new Map();
   state.inventory.forEach(item => {
@@ -330,12 +478,13 @@ function renderInventory() {
     const card = document.createElement('article');
     card.className = 'orb-card';
     const token = createOrbToken(item.name, rarity);
+    const locked = isOrbLocked(item.name);
     const details = document.createElement('div');
     details.className = 'orb-details';
     const title = document.createElement('h4');
     title.textContent = item.name;
     const rarityLabel = document.createElement('p');
-    rarityLabel.textContent = `${rarity.short} · ${rarity.name} · ×${item.count}`;
+    rarityLabel.textContent = `${rarity.short} · ${rarity.name} · ×${item.count}${locked ? ' · LOCKED' : ''}`;
     details.append(title, rarityLabel);
     const actions = document.createElement('div');
     actions.className = 'orb-actions';
@@ -343,16 +492,146 @@ function renderInventory() {
     const unitPrice = getOrbPrice(rarity, item.name);
     value.className = 'orb-value';
     value.textContent = `¢ ${formatCoins(unitPrice * item.count)}`;
+    const lock = document.createElement('button');
+    lock.type = 'button';
+    lock.className = `lock-button${locked ? ' is-locked' : ''}`;
+    lock.textContent = locked ? 'Unlock' : 'Lock';
+    lock.setAttribute('aria-pressed', String(locked));
+    lock.setAttribute('aria-label', `${locked ? 'Unlock' : 'Lock'} all ${item.name} orbs`);
+    lock.addEventListener('click', () => toggleOrbLock(item.name));
     const sell = document.createElement('button');
     sell.type = 'button';
     sell.className = 'sell-button';
-    sell.textContent = `Sell ×${item.count}`;
+    sell.disabled = locked;
+    sell.textContent = locked ? 'Locked' : `Sell ×${item.count}`;
     sell.setAttribute('aria-label', `Sell ${item.count} ${item.name} orb${item.count === 1 ? '' : 's'} for ${formatCoins(unitPrice * item.count)} coins`);
     sell.addEventListener('click', () => sellOrb(item.rarity, item.name));
-    actions.append(value, sell);
+    actions.append(value, lock, sell);
     card.append(token, details, actions);
     elements.inventoryGrid.append(card);
   });
+}
+
+function renderJournal() {
+  const discovered = new Set(state.discoveredOrbs);
+  const discoveredCount = discovered.size;
+  const progress = Math.round(discoveredCount / knownOrbNames.size * 100);
+  elements.journalProgressCount.textContent = `${discoveredCount} / ${knownOrbNames.size}`;
+  elements.journalProgressPercent.textContent = `${progress}%`;
+  elements.journalProgressTrack.setAttribute('aria-valuenow', discoveredCount);
+  elements.journalProgressFill.style.width = `${progress}%`;
+
+  elements.journalMilestoneList.replaceChildren();
+  journalMilestones.forEach(milestone => {
+    const claimed = state.claimedJournalMilestones.includes(milestone.id);
+    const item = document.createElement('div');
+    item.className = `journal-milestone${claimed ? ' journal-milestone-claimed' : ''}`;
+    const goal = document.createElement('strong');
+    goal.textContent = `${milestone.total} orbs`;
+    const reward = document.createElement('span');
+    reward.textContent = `✧ ${milestone.gems} Mystic Gem${milestone.gems === 1 ? '' : 's'}`;
+    const status = document.createElement('span');
+    status.textContent = claimed ? 'CLAIMED' : `${Math.min(discoveredCount, milestone.total)}/${milestone.total}`;
+    item.append(goal, reward, status);
+    elements.journalMilestoneList.append(item);
+  });
+
+  elements.journalRarities.replaceChildren();
+  rarities.forEach(rarity => {
+    const section = document.createElement('section');
+    section.className = 'journal-rarity';
+    const header = document.createElement('div');
+    header.className = 'journal-rarity-header';
+    const title = document.createElement('h3');
+    title.textContent = rarity.name;
+    const rarityDiscovered = rarity.orbs.filter(name => discovered.has(name)).length;
+    const count = document.createElement('span');
+    count.textContent = `${rarityDiscovered}/${rarity.orbs.length}`;
+    header.append(title, count);
+
+    const grid = document.createElement('div');
+    grid.className = 'journal-orb-grid';
+    rarity.orbs.forEach(name => {
+      const found = discovered.has(name);
+      const card = document.createElement('article');
+      card.className = `journal-orb${found ? ' journal-orb-found' : ' journal-orb-hidden'}`;
+      const icon = found ? createOrbToken(name, rarity) : document.createElement('span');
+      if (!found) {
+        icon.className = 'journal-silhouette';
+        icon.textContent = '?';
+        icon.setAttribute('aria-label', `Undiscovered ${rarity.name} orb`);
+      }
+      const details = document.createElement('div');
+      details.className = 'journal-orb-details';
+      const orbName = document.createElement('strong');
+      orbName.textContent = found ? name : '???';
+      const info = document.createElement('span');
+      info.textContent = found ? `DISCOVERED · ¢ ${formatCoins(getOrbPrice(rarity, name))}` : 'UNDISCOVERED';
+      details.append(orbName, info);
+      card.append(icon, details);
+      grid.append(card);
+    });
+
+    section.append(header, grid);
+    elements.journalRarities.append(section);
+  });
+}
+
+function renderDailyContracts() {
+  elements.dailyContractList.replaceChildren();
+  state.dailyContracts.offers.forEach(offer => {
+    const card = document.createElement('article');
+    card.className = `daily-contract${offer.claimed ? ' daily-contract-complete' : ''}`;
+    const heading = document.createElement('div');
+    heading.className = 'daily-contract-heading';
+    const title = document.createElement('strong');
+    title.textContent = offer.title;
+    const reward = document.createElement('span');
+    reward.textContent = [offer.reward.coins ? `¢ ${formatCoins(offer.reward.coins)}` : '', offer.reward.gems ? `✧ ${offer.reward.gems}` : ''].filter(Boolean).join(' + ');
+    heading.append(title, reward);
+    const description = document.createElement('p');
+    description.textContent = offer.description;
+    const track = document.createElement('div');
+    track.className = 'daily-contract-track';
+    const fill = document.createElement('span');
+    fill.style.width = `${offer.progress / offer.target * 100}%`;
+    track.append(fill);
+    const status = document.createElement('span');
+    status.className = 'daily-contract-status';
+    status.textContent = offer.claimed ? 'COMPLETE' : `${offer.progress} / ${offer.target}`;
+    card.append(heading, description, track, status);
+    elements.dailyContractList.append(card);
+  });
+}
+
+function updateDailyContractDay() {
+  if (state.dailyContracts.day === getUtcDay()) return;
+  state.dailyContracts = createDailyContracts(state.discoveredOrbs.length);
+  saveGame();
+  render();
+}
+
+function claimJournalMilestones() {
+  const rewards = [];
+  journalMilestones.forEach(milestone => {
+    if (state.discoveredOrbs.length < milestone.total || state.claimedJournalMilestones.includes(milestone.id)) return;
+    state.claimedJournalMilestones.push(milestone.id);
+    state.mysticGems += milestone.gems;
+    rewards.push(milestone);
+  });
+  if (rewards.length > 0) {
+    const gemsEarned = rewards.reduce((total, milestone) => total + milestone.gems, 0);
+    elements.journalMessage.textContent = `Collection milestone reached: +${gemsEarned} Mystic Gem${gemsEarned === 1 ? '' : 's'}.`;
+  }
+  return rewards;
+}
+
+function recordOrbDiscovery(name) {
+  if (!knownOrbNames.has(name) || state.discoveredOrbs.includes(name)) return [];
+  state.discoveredOrbs.push(name);
+  const rewards = claimJournalMilestones();
+  advanceDailyContracts('discover');
+  return rewards;
 }
 
 function renderLastPull() {
@@ -446,7 +725,7 @@ function renderTrades() {
   npcTrades.forEach((trade, index) => {
     const giveRarity = rarities.find(rarity => rarity.id === trade.give);
     const getRarity = rarities.find(rarity => rarity.id === trade.get);
-    const owned = state.inventory.filter(item => item.rarity === trade.give).length;
+    const owned = state.inventory.filter(item => item.rarity === trade.give && !isOrbLocked(item.name)).length;
     const ready = owned >= trade.count;
     const card = document.createElement('article');
     card.className = `trade-card${ready ? ' trade-card-ready' : ''}`;
@@ -511,6 +790,11 @@ function renderTrades() {
 
 function render() {
   elements.balance.textContent = formatCoins(state.coins);
+  elements.mysticGemBalance.textContent = state.mysticGems;
+  elements.boostGemBalance.textContent = state.mysticGems;
+  elements.boostCurrentRate.textContent = `+${(state.moneyBoosts * .01).toFixed(2)}%`;
+  elements.boostLevel.textContent = state.moneyBoosts;
+  elements.buyMoneyBoost.disabled = state.mysticGems < 1;
   elements.orbStage.dataset.gacha = selectedGacha.id;
   elements.gachaTitle.textContent = selectedGacha.name;
   elements.gachaTier.textContent = selectedGacha.tier;
@@ -518,6 +802,12 @@ function render() {
   elements.rollName.textContent = selectedGacha.name;
   elements.rollCost.textContent = formatCoins(selectedGacha.cost);
   elements.rollAnimationToggle.checked = state.animateRolls;
+  const pityCount = state.pityCounts[selectedGacha.id] || 0;
+  elements.pityCount.textContent = pityCount >= mythicPityLimit
+    ? `${mythicPityLimit} / ${mythicPityLimit} · GUARANTEED NEXT`
+    : `${pityCount} / ${mythicPityLimit} MISSES`;
+  elements.pityTrack.setAttribute('aria-valuenow', Math.min(pityCount, mythicPityLimit));
+  elements.pityFill.style.width = `${Math.min(pityCount, mythicPityLimit) / mythicPityLimit * 100}%`;
   elements.rollButton.disabled = isRolling || state.coins < selectedGacha.cost;
   elements.rollMessage.classList.remove('error');
   elements.rollMessage.textContent = state.coins < selectedGacha.cost
@@ -525,6 +815,8 @@ function render() {
     : 'One roll. One orb. What will you find?';
   renderOdds();
   renderInventory();
+  renderJournal();
+  renderDailyContracts();
   renderTrades();
   renderStock();
   renderLastPull();
@@ -548,6 +840,8 @@ function buyStockOrb(name, rarityId) {
   state.coins -= price;
   state.stock[name] = false;
   state.inventory.push({ name, rarity: rarity.id, gacha: 'Orb Stock' });
+  recordOrbDiscovery(name);
+  advanceDailyContracts('buy');
   saveGame();
   render();
   elements.stockMessage.textContent = `Bought ${name} for ¢ ${formatCoins(price)}.`;
@@ -569,12 +863,34 @@ function updateStockCountdown() {
 }
 
 function rollRarity() {
+  const pityCount = state.pityCounts[selectedGacha.id] || 0;
+  const mythicIndex = rarities.findIndex(rarity => rarity.id === 'mythic');
+  if (pityCount >= mythicPityLimit) {
+    const eligibleOdds = selectedGacha.odds.slice(mythicIndex);
+    const eligibleTotal = eligibleOdds.reduce((total, chance) => total + chance, 0);
+    const pityRoll = Math.random() * eligibleTotal;
+    let eligibleThreshold = 0;
+    for (let index = mythicIndex; index < rarities.length; index += 1) {
+      eligibleThreshold += selectedGacha.odds[index];
+      if (pityRoll < eligibleThreshold) {
+        state.pityCounts[selectedGacha.id] = 0;
+        return rarities[index];
+      }
+    }
+    state.pityCounts[selectedGacha.id] = 0;
+    return rarities[rarities.length - 1];
+  }
+
   const roll = Math.random() * 100;
   let threshold = 0;
   for (let index = 0; index < selectedGacha.odds.length; index += 1) {
     threshold += selectedGacha.odds[index];
-    if (roll < threshold) return rarities[index];
+    if (roll < threshold) {
+      state.pityCounts[selectedGacha.id] = index >= mythicIndex ? 0 : pityCount + 1;
+      return rarities[index];
+    }
   }
+  state.pityCounts[selectedGacha.id] = pityCount + 1;
   return rarities[rarities.length - 1];
 }
 
@@ -588,12 +904,12 @@ function rollOrb(rarity) {
 function makeTrade(tradeIndex) {
   const trade = npcTrades[tradeIndex];
   if (!trade) return;
-  const owned = state.inventory.filter(item => item.rarity === trade.give).length;
+  const owned = state.inventory.filter(item => item.rarity === trade.give && !isOrbLocked(item.name)).length;
   if (owned < trade.count) return;
 
   let removed = 0;
   state.inventory = state.inventory.filter(item => {
-    if (item.rarity === trade.give && removed < trade.count) {
+    if (item.rarity === trade.give && !isOrbLocked(item.name) && removed < trade.count) {
       removed += 1;
       return false;
     }
@@ -603,7 +919,9 @@ function makeTrade(tradeIndex) {
   const rewardRarity = rarities.find(rarity => rarity.id === trade.get);
   const rewardName = rollOrb(rewardRarity);
   state.inventory.push({ name: rewardName, rarity: rewardRarity.id, gacha: `Trade with ${trade.npc}` });
+  recordOrbDiscovery(rewardName);
   state.tradeCount += 1;
+  advanceDailyContracts('trade');
   saveGame();
   render();
   elements.tradeMessage.classList.add('trade-message-success');
@@ -652,7 +970,9 @@ function roll() {
   const name = rollOrb(rarity);
   const result = { name, rarity: rarity.id, gacha: selectedGacha.name };
   state.inventory.push(result);
+  recordOrbDiscovery(name);
   state.rolls += 1;
+  advanceDailyContracts('roll');
   state.lastPull = result;
   saveGame();
   render();
@@ -667,34 +987,54 @@ function roll() {
 }
 
 function sellOrb(rarityId, name) {
+  if (isOrbLocked(name)) return;
   const matching = state.inventory.filter(item => item.rarity === rarityId && item.name === name);
   if (matching.length === 0) return;
   const rarity = rarities.find(item => item.id === rarityId);
   state.inventory = state.inventory.filter(item => item.rarity !== rarityId || item.name !== name);
-  const price = getOrbPrice(rarity, name) * matching.length;
-  state.coins += price;
+  const rareOrbCount = ['mythic', 'transcendent', 'oneOfAKind'].includes(rarityId) ? matching.length : 0;
+  const { payout, gems } = applySale(getOrbPrice(rarity, name) * matching.length, matching.length, rareOrbCount);
   saveGame();
   render();
-  elements.rollMessage.textContent = `Sold ${matching.length} ${name} orb${matching.length === 1 ? '' : 's'} for ¢ ${formatCoins(price)}.`;
+  elements.rollMessage.textContent = `Sold ${matching.length} ${name} orb${matching.length === 1 ? '' : 's'} for ¢ ${formatCoins(payout)}.${gems ? ` Found ${gems} Mystic Gem${gems === 1 ? '' : 's'}!` : ''}`;
 }
 
 function sellAll() {
-  if (state.inventory.length === 0) return;
-  const total = state.inventory.reduce((sum, item) => {
+  const unlocked = state.inventory.filter(item => !isOrbLocked(item.name));
+  if (unlocked.length === 0) return;
+  const soldCount = unlocked.length;
+  const rareOrbCount = unlocked.filter(item => ['mythic', 'transcendent', 'oneOfAKind'].includes(item.rarity)).length;
+  const total = unlocked.reduce((sum, item) => {
     const rarity = rarities.find(entry => entry.id === item.rarity);
     return sum + (rarity ? getOrbPrice(rarity, item.name) : 0);
   }, 0);
-  state.coins += total;
-  state.inventory = [];
+  const { payout, gems } = applySale(total, soldCount, rareOrbCount);
+  state.inventory = state.inventory.filter(item => isOrbLocked(item.name));
   saveGame();
   render();
-  elements.rollMessage.textContent = `Sold your collection for ¢ ${formatCoins(total)}.`;
+  elements.rollMessage.textContent = `Sold ${soldCount} unlocked orb${soldCount === 1 ? '' : 's'} for ¢ ${formatCoins(payout)}.${gems ? ` Found ${gems} Mystic Gem${gems === 1 ? '' : 's'}!` : ''}`;
+}
+
+function toggleOrbLock(name) {
+  if (isOrbLocked(name)) state.lockedOrbs = state.lockedOrbs.filter(orbName => orbName !== name);
+  else state.lockedOrbs.push(name);
+  saveGame();
+  render();
+}
+
+function buyMoneyBoost() {
+  if (state.mysticGems < 1) return;
+  state.mysticGems -= 1;
+  state.moneyBoosts += 1;
+  saveGame();
+  render();
+  elements.boostMessage.textContent = `Permanent boost purchased. Sale bonus is now +${(state.moneyBoosts * .01).toFixed(2)}%.`;
 }
 
 function resetGame() {
   rollAnimationId += 1;
   isRolling = false;
-  state = { coins: initialCoins, inventory: [], rolls: 0, tradeCount: 0, animateRolls: true, stock: generateStock(), stockRefreshAt: Date.now() + stockCycleMs, lastPull: null, selectedGacha: 'copper' };
+  state = { coins: initialCoins, inventory: [], lockedOrbs: [], rolls: 0, tradeCount: 0, mysticGems: 0, moneyBoosts: 0, discoveredOrbs: [], claimedJournalMilestones: [], dailyContracts: createDailyContracts(), pityCounts: createPityCounts(), animateRolls: true, stock: generateStock(), stockRefreshAt: Date.now() + stockCycleMs, lastPull: null, selectedGacha: 'copper' };
   selectedGacha = gachas[0];
   saveGame();
   render();
@@ -707,7 +1047,12 @@ document.getElementById('open-trading').addEventListener('click', () => elements
 document.getElementById('close-trading').addEventListener('click', () => elements.tradingDialog.close());
 document.getElementById('open-stock').addEventListener('click', () => elements.stockDialog.showModal());
 document.getElementById('close-stock').addEventListener('click', () => elements.stockDialog.close());
+document.getElementById('open-boost-shop').addEventListener('click', () => elements.boostDialog.showModal());
+document.getElementById('close-boost-shop').addEventListener('click', () => elements.boostDialog.close());
+elements.buyMoneyBoost.addEventListener('click', buyMoneyBoost);
 elements.rollButton.addEventListener('click', roll);
+document.getElementById('open-journal').addEventListener('click', () => elements.journalDialog.showModal());
+document.getElementById('close-journal').addEventListener('click', () => elements.journalDialog.close());
 elements.rollAnimationToggle.addEventListener('change', () => {
   state.animateRolls = elements.rollAnimationToggle.checked;
   saveGame();
@@ -732,9 +1077,20 @@ elements.tradingDialog.addEventListener('click', event => {
 elements.stockDialog.addEventListener('click', event => {
   if (event.target === elements.stockDialog) elements.stockDialog.close();
 });
+elements.boostDialog.addEventListener('click', event => {
+  if (event.target === elements.boostDialog) elements.boostDialog.close();
+});
+elements.journalDialog.addEventListener('click', event => {
+  if (event.target === elements.journalDialog) elements.journalDialog.close();
+});
 elements.resetDialog.addEventListener('click', event => {
   if (event.target === elements.resetDialog) elements.resetDialog.close();
 });
 
+const restoredJournalRewards = claimJournalMilestones();
+if (restoredJournalRewards.length > 0) saveGame();
 render();
-window.setInterval(updateStockCountdown, 1000);
+window.setInterval(() => {
+  updateStockCountdown();
+  updateDailyContractDay();
+}, 1000);

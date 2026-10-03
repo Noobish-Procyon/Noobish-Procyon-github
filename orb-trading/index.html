@@ -23,6 +23,7 @@
       <div class="wallet" aria-live="polite">
         <span class="wallet-label">YOUR COINS</span>
         <strong><span class="coin-mark" aria-hidden="true">¢</span><span id="coin-balance">5,000</span></strong>
+        <span class="gem-balance"><span aria-hidden="true">✧</span> <span id="mystic-gem-balance">0</span> MYSTIC GEMS</span>
       </div>
     </header>
 
@@ -66,13 +67,24 @@
             <div class="odds-section">
               <div class="subhead"><h3>Drop odds</h3><span>PER ROLL</span></div>
               <div class="odds-list" id="odds-list"></div>
+              <div class="pity-meter">
+                <div class="pity-meter-heading"><span>MYTHIC+ PITY</span><strong id="pity-count">0 / 40 MISSES</strong></div>
+                <div class="pity-track" id="pity-track" role="progressbar" aria-label="Mythic or higher pity progress" aria-valuemin="0" aria-valuemax="40" aria-valuenow="0"><span id="pity-fill"></span></div>
+                <p>After 40 rolls without Mythic or higher, your next roll is guaranteed Mythic+. Each gacha tracks its own misses.</p>
+              </div>
             </div>
           </section>
 
           <section class="inventory-panel" aria-labelledby="inventory-title">
             <div class="panel-topline inventory-heading">
               <div><p class="eyebrow">YOUR COLLECTION</p><h2 id="inventory-title">Orb inventory <span class="item-count" id="inventory-count">0</span></h2></div>
-              <button class="button button-sell-all" id="sell-all" type="button" disabled><span aria-hidden="true">↗</span> Sell all</button>
+              <div class="inventory-actions">
+                <button class="button button-quiet journal-open-button" id="open-journal" type="button"><span aria-hidden="true">▤</span> Journal</button>
+                <div class="sell-all-control">
+                  <button class="button button-sell-all" id="sell-all" type="button" disabled><span aria-hidden="true">↗</span> Sell unlocked</button>
+                  <span id="sell-all-preview">0 unlocked · ¢ 0</span>
+                </div>
+              </div>
             </div>
             <div class="inventory-empty" id="inventory-empty">
               <div class="empty-gem" aria-hidden="true"><span></span></div>
@@ -102,12 +114,18 @@
               <span>Your latest orb will show up here.</span>
             </div>
           </section>
+          <section class="daily-contract-panel" aria-labelledby="daily-contract-title">
+            <div class="subhead"><h3 id="daily-contract-title">Daily contracts</h3><span id="daily-reset-label">UTC RESET</span></div>
+            <div class="daily-contract-list" id="daily-contract-list"></div>
+            <p class="daily-contract-footnote">New objectives arrive at midnight UTC.</p>
+          </section>
           <section class="market-note">
             <p class="eyebrow">MARKET BOARD</p>
             <div class="market-stat"><span>Rarities</span><strong>8</strong></div>
             <div class="market-stat"><span>Gachas</span><strong>8</strong></div>
             <div class="market-stat"><span>1oAK jackpot</span><strong>90 / 10</strong></div>
             <p class="market-footnote">Orb prices increase with rarity. Procyon Orb is the rarest market find.</p>
+            <button class="button boost-shop-button" id="open-boost-shop" type="button"><span aria-hidden="true">✧</span> Boost shop</button>
           </section>
           <button class="reset-link" id="reset-game" type="button">Reset game data</button>
         </aside>
@@ -151,6 +169,51 @@
     </div>
     <p class="stock-message" id="stock-message" aria-live="polite">Pick up an orb while it is in stock.</p>
     <div class="stock-list" id="stock-list"></div>
+  </dialog>
+
+  <dialog class="boost-dialog" id="boost-dialog" aria-labelledby="boost-title">
+    <div class="dialog-header">
+      <div><p class="eyebrow">PERMANENT UPGRADES</p><h2 id="boost-title">Boost shop</h2></div>
+      <button class="close-button" id="close-boost-shop" type="button" aria-label="Close Boost Shop">×</button>
+    </div>
+    <div class="boost-shop-content">
+      <div class="boost-summary">
+        <div><span>MYSTIC GEMS</span><strong><span aria-hidden="true">✧</span> <span id="boost-gem-balance">0</span></strong></div>
+        <div><span>CURRENT SALE BOOST</span><strong id="boost-current-rate">+0.00%</strong></div>
+        <div><span>BOOST LEVEL</span><strong id="boost-level">0</strong></div>
+      </div>
+      <section class="boost-offer">
+        <div class="boost-offer-icon" aria-hidden="true">↗</div>
+        <div class="boost-offer-copy">
+          <h3>Permanent money boost</h3>
+          <p>Earn an extra 0.01% coins each time you sell orbs. Every purchase stacks with your existing boost.</p>
+        </div>
+        <button class="button boost-buy-button" id="buy-money-boost" type="button">Buy · 1 Mystic Gem</button>
+      </section>
+      <p class="boost-message" id="boost-message" aria-live="polite">Sell orbs for a 1% chance to find a Mystic Gem.</p>
+    </div>
+  </dialog>
+
+  <dialog class="journal-dialog" id="journal-dialog" aria-labelledby="journal-title">
+    <div class="dialog-header">
+      <div><p class="eyebrow">FIELD GUIDE / ORB INDEX</p><h2 id="journal-title">Orb Journal</h2></div>
+      <button class="close-button" id="close-journal" type="button" aria-label="Close Orb Journal">×</button>
+    </div>
+    <div class="journal-content">
+      <section class="journal-overview" aria-label="Collection progress">
+        <div class="journal-progress-head">
+          <div><span class="eyebrow">DISCOVERED ORBS</span><strong id="journal-progress-count">0 / 43</strong></div>
+          <span id="journal-progress-percent">0%</span>
+        </div>
+        <div class="journal-progress-track" id="journal-progress-track" role="progressbar" aria-label="Orb collection progress" aria-valuemin="0" aria-valuemax="43" aria-valuenow="0"><span id="journal-progress-fill"></span></div>
+        <p id="journal-message" aria-live="polite">First-time discoveries count even after you sell an orb.</p>
+      </section>
+      <section class="journal-milestones" aria-labelledby="journal-milestones-title">
+        <div class="subhead"><h3 id="journal-milestones-title">Collection rewards</h3><span>ONE-TIME MYSTIC GEMS</span></div>
+        <div class="journal-milestone-list" id="journal-milestone-list"></div>
+      </section>
+      <div class="journal-rarities" id="journal-rarities"></div>
+    </div>
   </dialog>
 
   <dialog class="confirm-dialog" id="reset-dialog" aria-labelledby="reset-title">
