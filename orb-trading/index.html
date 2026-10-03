@@ -85,7 +85,17 @@
 
         <aside class="side-column">
           <section class="last-pull-panel" aria-labelledby="last-pull-title">
-            <div class="subhead"><h3 id="last-pull-title">Last pull</h3><span id="pull-number">#000</span></div>
+            <div class="subhead">
+              <h3 id="last-pull-title">Last pull</h3>
+              <div class="last-pull-tools">
+                <span id="pull-number">#000</span>
+                <label class="animation-toggle">
+                  <span>Animation</span>
+                  <input id="roll-animation-toggle" type="checkbox" checked>
+                  <span class="animation-switch" aria-hidden="true"></span>
+                </label>
+              </div>
+            </div>
             <div class="last-pull-content" id="last-pull-content">
               <div class="pull-placeholder" aria-hidden="true"><span>?</span></div>
               <p>Make your first roll</p>

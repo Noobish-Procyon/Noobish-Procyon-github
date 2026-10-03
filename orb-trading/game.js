@@ -144,6 +144,7 @@ const elements = {
   rollName: document.getElementById('roll-gacha-name'),
   rollCost: document.getElementById('roll-cost'),
   rollButton: document.getElementById('roll-button'),
+  rollAnimationToggle: document.getElementById('roll-animation-toggle'),
   rollMessage: document.getElementById('roll-message'),
   oddsList: document.getElementById('odds-list'),
   inventoryGrid: document.getElementById('inventory-grid'),
@@ -230,6 +231,7 @@ function loadGame() {
         inventory: saved.inventory.filter(item => item && typeof item.name === 'string' && typeof item.rarity === 'string'),
         rolls: Math.max(0, Number(saved.rolls) || 0),
         tradeCount: Math.max(0, Number(saved.tradeCount) || 0),
+        animateRolls: saved.animateRolls !== false,
         stock,
         stockRefreshAt: Number.isFinite(saved.stockRefreshAt) ? saved.stockRefreshAt : Date.now() + stockCycleMs,
         lastPull: saved.lastPull || null,
@@ -239,7 +241,7 @@ function loadGame() {
   } catch (error) {
     console.warn('Could not load Orb Trading save.', error);
   }
-  return { coins: initialCoins, inventory: [], rolls: 0, tradeCount: 0, stock: generateStock(), stockRefreshAt: Date.now() + stockCycleMs, lastPull: null, selectedGacha: 'copper' };
+  return { coins: initialCoins, inventory: [], rolls: 0, tradeCount: 0, animateRolls: true, stock: generateStock(), stockRefreshAt: Date.now() + stockCycleMs, lastPull: null, selectedGacha: 'copper' };
 }
 
 function saveGame() {
@@ -515,6 +517,7 @@ function render() {
   elements.gachaDescription.textContent = selectedGacha.description;
   elements.rollName.textContent = selectedGacha.name;
   elements.rollCost.textContent = formatCoins(selectedGacha.cost);
+  elements.rollAnimationToggle.checked = state.animateRolls;
   elements.rollButton.disabled = isRolling || state.coins < selectedGacha.cost;
   elements.rollMessage.classList.remove('error');
   elements.rollMessage.textContent = state.coins < selectedGacha.cost
@@ -642,7 +645,8 @@ function animateLastPull(result, animationId) {
 
 function roll() {
   if (isRolling || state.coins < selectedGacha.cost) return;
-  isRolling = true;
+  const animate = state.animateRolls;
+  isRolling = animate;
   state.coins -= selectedGacha.cost;
   const rarity = rollRarity();
   const name = rollOrb(rarity);
@@ -653,6 +657,10 @@ function roll() {
   saveGame();
   render();
   elements.rollMessage.classList.remove('error');
+  if (!animate) {
+    elements.rollMessage.textContent = `You found ${name} · ${rarity.name}!`;
+    return;
+  }
   elements.rollMessage.textContent = 'Rolling...';
   rollAnimationId += 1;
   animateLastPull(result, rollAnimationId);
@@ -686,7 +694,7 @@ function sellAll() {
 function resetGame() {
   rollAnimationId += 1;
   isRolling = false;
-  state = { coins: initialCoins, inventory: [], rolls: 0, tradeCount: 0, stock: generateStock(), stockRefreshAt: Date.now() + stockCycleMs, lastPull: null, selectedGacha: 'copper' };
+  state = { coins: initialCoins, inventory: [], rolls: 0, tradeCount: 0, animateRolls: true, stock: generateStock(), stockRefreshAt: Date.now() + stockCycleMs, lastPull: null, selectedGacha: 'copper' };
   selectedGacha = gachas[0];
   saveGame();
   render();
@@ -700,6 +708,17 @@ document.getElementById('close-trading').addEventListener('click', () => element
 document.getElementById('open-stock').addEventListener('click', () => elements.stockDialog.showModal());
 document.getElementById('close-stock').addEventListener('click', () => elements.stockDialog.close());
 elements.rollButton.addEventListener('click', roll);
+elements.rollAnimationToggle.addEventListener('change', () => {
+  state.animateRolls = elements.rollAnimationToggle.checked;
+  saveGame();
+  if (!state.animateRolls && isRolling) {
+    rollAnimationId += 1;
+    isRolling = false;
+    render();
+    const rarity = rarities.find(item => item.id === state.lastPull.rarity);
+    elements.rollMessage.textContent = `You found ${state.lastPull.name} · ${rarity.name}!`;
+  }
+});
 elements.sellAll.addEventListener('click', sellAll);
 document.getElementById('reset-game').addEventListener('click', () => elements.resetDialog.showModal());
 document.getElementById('cancel-reset').addEventListener('click', () => elements.resetDialog.close());

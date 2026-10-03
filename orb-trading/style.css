@@ -186,6 +186,15 @@ h2 { margin-bottom: 0; font-size: 20px; line-height: 1.2; }
 .sell-button:hover { background: rgba(208, 239, 112, .12); }
 
 .last-pull-panel { padding: 17px; }
+.last-pull-tools { display: flex; align-items: center; gap: 10px; }
+.last-pull-tools > span { color: var(--quiet); font-family: var(--font-mono); font-size: 9px; }
+.animation-toggle { position: relative; display: inline-flex; align-items: center; gap: 6px; color: var(--muted); cursor: pointer; font-family: var(--font-mono); font-size: 8px; user-select: none; }
+.animation-toggle input { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; clip-path: inset(50%); }
+.animation-switch { position: relative; width: 27px; height: 15px; flex: 0 0 auto; border: 1px solid var(--quiet); border-radius: 10px; background: rgba(10, 20, 15, .55); transition: background 140ms ease, border-color 140ms ease; }
+.animation-switch::after { position: absolute; top: 2px; left: 2px; width: 9px; height: 9px; border-radius: 50%; background: var(--muted); content: ""; transition: transform 140ms ease, background 140ms ease; }
+.animation-toggle input:checked + .animation-switch { border-color: var(--lime); background: rgba(208, 239, 112, .2); }
+.animation-toggle input:checked + .animation-switch::after { background: var(--lime); transform: translateX(12px); }
+.animation-toggle input:focus-visible + .animation-switch { outline: 2px solid var(--lime); outline-offset: 3px; }
 .last-pull-content { display: grid; justify-items: center; padding: 19px 4px 7px; text-align: center; }
 .pull-placeholder { display: grid; width: 65px; aspect-ratio: 1; place-items: center; margin-bottom: 13px; border: 1px dashed rgba(208, 239, 112, .38); border-radius: 50%; color: var(--lime); font-family: Georgia, serif; font-size: 28px; }
 .last-pull-content p { margin: 0 0 5px; color: var(--paper); font-size: 12px; }
