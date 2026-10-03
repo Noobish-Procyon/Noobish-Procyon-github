@@ -145,7 +145,8 @@ const npcTrades = [
   { npc: 'Orin', title: 'The Archivist', note: 'I will trade old stories for a legendary discovery.', give: 'epic', count: 2, get: 'legendary', color: '#bd91df' },
   { npc: 'Vela', title: 'The Astronomer', note: 'Two legendary lights for a mythic one.', give: 'legendary', count: 2, get: 'mythic', color: '#e5b95b' },
   { npc: 'Unit-8', title: 'The Broker', note: 'Mythic energy can be refined into something transcendent.', give: 'mythic', count: 2, get: 'transcendent', color: '#72cfc7' },
-  { npc: 'Wayfarer', title: 'Beyond the Veil', note: 'Two transcendent orbs. One impossible prize.', give: 'transcendent', count: 2, get: 'oneOfAKind', color: '#efe0a0' }
+  { npc: 'Wayfarer', title: 'Beyond the Veil', note: 'Two transcendent orbs. One impossible prize.', give: 'transcendent', count: 2, get: 'oneOfAKind', color: '#efe0a0' },
+  { npc: 'Midas', title: 'The Gem Broker', note: 'Trade me one unlocked One of a Kind orb for five Mystic Gems.', give: 'oneOfAKind', count: 1, reward: { gems: 5 }, color: '#a9ddff' }
 ];
 
 const stockOdds = {
@@ -735,7 +736,7 @@ function renderTrades() {
 
   npcTrades.forEach((trade, index) => {
     const giveRarity = rarities.find(rarity => rarity.id === trade.give);
-    const getRarity = rarities.find(rarity => rarity.id === trade.get);
+    const getRarity = trade.get ? rarities.find(rarity => rarity.id === trade.get) : null;
     const owned = state.inventory.filter(item => item.rarity === trade.give && !isOrbLocked(item.name)).length;
     const ready = owned >= trade.count;
     const card = document.createElement('article');
@@ -783,8 +784,10 @@ function renderTrades() {
     const receiveLabel = document.createElement('span');
     receiveLabel.textContent = 'YOU GET';
     const receiveValue = document.createElement('strong');
-    receiveValue.style.setProperty('--trade-color', getRarity.color);
-    receiveValue.textContent = `1 ${getRarity.name}`;
+    receiveValue.style.setProperty('--trade-color', getRarity?.color || '#a9ddff');
+    receiveValue.textContent = trade.reward?.gems
+      ? `${trade.reward.gems} Mystic Gems`
+      : `1 ${getRarity.name}`;
     receive.append(receiveLabel, receiveValue);
     exchange.append(give, arrow, receive);
 
@@ -946,16 +949,25 @@ function makeTrade(tradeIndex) {
     return true;
   });
 
-  const rewardRarity = rarities.find(rarity => rarity.id === trade.get);
-  const rewardName = rollOrb(rewardRarity);
-  state.inventory.push({ name: rewardName, rarity: rewardRarity.id, gacha: `Trade with ${trade.npc}` });
-  recordOrbDiscovery(rewardName);
+  let rewardDescription;
+  if (trade.get) {
+    const rewardRarity = rarities.find(rarity => rarity.id === trade.get);
+    const rewardName = rollOrb(rewardRarity);
+    state.inventory.push({ name: rewardName, rarity: rewardRarity.id, gacha: `Trade with ${trade.npc}` });
+    recordOrbDiscovery(rewardName);
+    rewardDescription = `${rewardName} · ${rewardRarity.name}`;
+  } else if (trade.reward?.gems) {
+    state.mysticGems += trade.reward.gems;
+    rewardDescription = `${trade.reward.gems} Mystic Gems`;
+  } else {
+    return;
+  }
   state.tradeCount += 1;
   advanceDailyContracts('trade');
   saveGame();
   render();
   elements.tradeMessage.classList.add('trade-message-success');
-  elements.tradeMessage.textContent = `${trade.npc} traded your ${trade.count} ${rarities.find(rarity => rarity.id === trade.give).name} orbs for ${rewardName} · ${rewardRarity.name}!`;
+  elements.tradeMessage.textContent = `${trade.npc} traded your ${trade.count} ${rarities.find(rarity => rarity.id === trade.give).name} orb${trade.count === 1 ? '' : 's'} for ${rewardDescription}!`;
 }
 
 function animateLastPull(result, animationId) {
