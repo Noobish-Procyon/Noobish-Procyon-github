@@ -51,8 +51,8 @@ const orbArt = {
   Dino: { symbol: '◖', color: '#7eaa4b', accent: '#e9ff99' },
   Phoenix: { symbol: '♨', color: '#ea653e', accent: '#ffdc69' },
   Disco: { symbol: '✺', color: '#e46ebd', accent: '#a8fff0' },
-  'Winter Triangle': { symbol: '❄', color: '#93cae8', accent: '#ffffff' },
-  'Procyon Orb': { symbol: '✶', color: '#fff0a1', accent: '#ffffff' }
+  'Winter Triangle': { symbol: '❄', color: '#93cae8', accent: '#c5f0ff' },
+  'Procyon Orb': { symbol: '✶', color: '#fff0a1', accent: '#fff1a1' }
 };
 
 const gachas = [
@@ -64,6 +64,16 @@ const gachas = [
   { id: 'diamond', name: 'Diamond', cost: 50000, tier: 'BRILLIANT ODDS', description: 'Rare is common here. The biggest finds still take luck.', odds: [20, 20, 20, 10, 12, 7, 6, 5] },
   { id: 'iridium', name: 'Iridium', cost: 100000, tier: 'ULTRA SERIES', description: 'The odds lean hard toward transcendent and mythic orbs.', odds: [2, 4, 6, 10, 18, 20, 25, 15] },
   { id: 'bigBang', name: 'Big Bang', cost: 1000000, tier: 'ENDGAME SERIES', description: 'No common, uncommon, or rare pulls. Just cosmic stakes.', odds: [0, 0, 0, 1, 2, 12, 40, 45] }
+];
+
+const npcTrades = [
+  { npc: 'Moss', title: 'The Tinker', note: 'A little pile of plain orbs for something with more spark.', give: 'common', count: 3, get: 'uncommon', color: '#d2a968' },
+  { npc: 'Sable', title: 'The Sifter', note: 'Two useful finds for one with a sharper edge.', give: 'uncommon', count: 2, get: 'rare', color: '#78c8a7' },
+  { npc: 'Juno', title: 'The Gemkeeper', note: 'Rare things catch my eye. Bring me a pair.', give: 'rare', count: 2, get: 'epic', color: '#7ea9e5' },
+  { npc: 'Orin', title: 'The Archivist', note: 'I will trade old stories for a legendary discovery.', give: 'epic', count: 2, get: 'legendary', color: '#bd91df' },
+  { npc: 'Vela', title: 'The Astronomer', note: 'Two legendary lights for a mythic one.', give: 'legendary', count: 2, get: 'mythic', color: '#e5b95b' },
+  { npc: 'Unit-8', title: 'The Broker', note: 'Mythic energy can be refined into something transcendent.', give: 'mythic', count: 2, get: 'transcendent', color: '#72cfc7' },
+  { npc: 'Wayfarer', title: 'Beyond the Veil', note: 'Two transcendent orbs. One impossible prize.', give: 'transcendent', count: 2, get: 'oneOfAKind', color: '#efe0a0' }
 ];
 
 const initialCoins = 5000;
@@ -81,6 +91,10 @@ const elements = {
   inventoryGrid: document.getElementById('inventory-grid'),
   inventoryEmpty: document.getElementById('inventory-empty'),
   inventoryCount: document.getElementById('inventory-count'),
+  tradeList: document.getElementById('trade-list'),
+  tradeCount: document.getElementById('trade-count'),
+  tradeMessage: document.getElementById('trade-message'),
+  tradingDialog: document.getElementById('trading-dialog'),
   sellAll: document.getElementById('sell-all'),
   lastPull: document.getElementById('last-pull-content'),
   pullNumber: document.getElementById('pull-number'),
@@ -104,7 +118,7 @@ function getOrbPrice(rarity, orbName) {
 function createOrbToken(name, rarity) {
   const art = orbArt[name] || { symbol: '✦', color: rarity.color, accent: '#ffffff' };
   const token = document.createElement('span');
-  token.className = `orb-token${name === 'Storm' ? ' orb-token--storm' : ''}`;
+  token.className = `orb-token${name === 'Storm' ? ' orb-token--storm' : ''}${rarity.id === 'oneOfAKind' ? ' orb-token--one-of-a-kind' : ''}`;
   token.style.setProperty('--orb-color', art.color);
   token.style.setProperty('--orb-accent', art.accent);
   token.setAttribute('aria-hidden', 'true');
@@ -123,6 +137,7 @@ function loadGame() {
         coins: Math.max(0, saved.coins),
         inventory: saved.inventory.filter(item => item && typeof item.name === 'string' && typeof item.rarity === 'string'),
         rolls: Math.max(0, Number(saved.rolls) || 0),
+        tradeCount: Math.max(0, Number(saved.tradeCount) || 0),
         lastPull: saved.lastPull || null,
         selectedGacha: saved.selectedGacha || 'copper'
       };
@@ -130,7 +145,7 @@ function loadGame() {
   } catch (error) {
     console.warn('Could not load Orb Trading save.', error);
   }
-  return { coins: initialCoins, inventory: [], rolls: 0, lastPull: null, selectedGacha: 'copper' };
+  return { coins: initialCoins, inventory: [], rolls: 0, tradeCount: 0, lastPull: null, selectedGacha: 'copper' };
 }
 
 function saveGame() {
@@ -209,8 +224,9 @@ function renderInventory() {
   });
 
   const rarityById = new Map(rarities.map(rarity => [rarity.id, rarity]));
+  const sortValue = rarityId => rarityId === 'oneOfAKind' ? Number.MAX_SAFE_INTEGER : rarityById.get(rarityId)?.sell || 0;
   [...grouped.values()].sort((a, b) => {
-    const rarityOrder = rarityById.get(b.rarity).sell - rarityById.get(a.rarity).sell;
+    const rarityOrder = sortValue(b.rarity) - sortValue(a.rarity);
     return rarityOrder || a.name.localeCompare(b.name);
   }).forEach(item => {
     const rarity = rarityById.get(item.rarity);
@@ -269,6 +285,76 @@ function renderLastPull() {
   elements.lastPull.classList.add('has-pull');
 }
 
+function renderTrades() {
+  elements.tradeList.replaceChildren();
+  elements.tradeCount.textContent = `${state.tradeCount} trade${state.tradeCount === 1 ? '' : 's'}`;
+
+  npcTrades.forEach((trade, index) => {
+    const giveRarity = rarities.find(rarity => rarity.id === trade.give);
+    const getRarity = rarities.find(rarity => rarity.id === trade.get);
+    const owned = state.inventory.filter(item => item.rarity === trade.give).length;
+    const ready = owned >= trade.count;
+    const card = document.createElement('article');
+    card.className = `trade-card${ready ? ' trade-card-ready' : ''}`;
+
+    const header = document.createElement('div');
+    header.className = 'trader-header';
+    const portrait = document.createElement('span');
+    portrait.className = 'trader-portrait';
+    portrait.style.setProperty('--npc-color', trade.color);
+    portrait.textContent = trade.npc.slice(0, 1);
+    portrait.setAttribute('aria-hidden', 'true');
+    const identity = document.createElement('div');
+    identity.className = 'trader-identity';
+    const name = document.createElement('strong');
+    name.textContent = trade.npc;
+    const title = document.createElement('span');
+    title.textContent = trade.title;
+    identity.append(name, title);
+    const readyMark = document.createElement('span');
+    readyMark.className = 'trade-ready-mark';
+    readyMark.textContent = ready ? 'READY' : `${owned}/${trade.count}`;
+    header.append(portrait, identity, readyMark);
+
+    const note = document.createElement('p');
+    note.className = 'trader-note';
+    note.textContent = trade.note;
+
+    const exchange = document.createElement('div');
+    exchange.className = 'trade-exchange';
+    const give = document.createElement('div');
+    give.className = 'trade-side';
+    const giveLabel = document.createElement('span');
+    giveLabel.textContent = 'YOU GIVE';
+    const giveValue = document.createElement('strong');
+    giveValue.style.setProperty('--trade-color', giveRarity.color);
+    giveValue.textContent = `${trade.count} ${giveRarity.name}`;
+    give.append(giveLabel, giveValue);
+    const arrow = document.createElement('span');
+    arrow.className = 'trade-arrow';
+    arrow.textContent = '→';
+    arrow.setAttribute('aria-hidden', 'true');
+    const receive = document.createElement('div');
+    receive.className = 'trade-side trade-side-receive';
+    const receiveLabel = document.createElement('span');
+    receiveLabel.textContent = 'YOU GET';
+    const receiveValue = document.createElement('strong');
+    receiveValue.style.setProperty('--trade-color', getRarity.color);
+    receiveValue.textContent = `1 ${getRarity.name}`;
+    receive.append(receiveLabel, receiveValue);
+    exchange.append(give, arrow, receive);
+
+    const action = document.createElement('button');
+    action.type = 'button';
+    action.className = 'trade-button';
+    action.disabled = !ready;
+    action.textContent = ready ? 'Make trade' : `Need ${trade.count - owned} more`;
+    action.addEventListener('click', () => makeTrade(index));
+    card.append(header, note, exchange, action);
+    elements.tradeList.append(card);
+  });
+}
+
 function render() {
   elements.balance.textContent = formatCoins(state.coins);
   elements.gachaTitle.textContent = selectedGacha.name;
@@ -283,6 +369,7 @@ function render() {
     : 'One roll. One orb. What will you find?';
   renderOdds();
   renderInventory();
+  renderTrades();
   renderLastPull();
   renderGachaOptions();
 }
@@ -310,6 +397,31 @@ function rollOrb(rarity) {
     return Math.random() < .9 ? 'Winter Triangle' : 'Procyon Orb';
   }
   return rarity.orbs[Math.floor(Math.random() * rarity.orbs.length)];
+}
+
+function makeTrade(tradeIndex) {
+  const trade = npcTrades[tradeIndex];
+  if (!trade) return;
+  const owned = state.inventory.filter(item => item.rarity === trade.give).length;
+  if (owned < trade.count) return;
+
+  let removed = 0;
+  state.inventory = state.inventory.filter(item => {
+    if (item.rarity === trade.give && removed < trade.count) {
+      removed += 1;
+      return false;
+    }
+    return true;
+  });
+
+  const rewardRarity = rarities.find(rarity => rarity.id === trade.get);
+  const rewardName = rollOrb(rewardRarity);
+  state.inventory.push({ name: rewardName, rarity: rewardRarity.id, gacha: `Trade with ${trade.npc}` });
+  state.tradeCount += 1;
+  saveGame();
+  render();
+  elements.tradeMessage.classList.add('trade-message-success');
+  elements.tradeMessage.textContent = `${trade.npc} traded your ${trade.count} ${rarities.find(rarity => rarity.id === trade.give).name} orbs for ${rewardName} · ${rewardRarity.name}!`;
 }
 
 function roll() {
@@ -353,7 +465,7 @@ function sellAll() {
 }
 
 function resetGame() {
-  state = { coins: initialCoins, inventory: [], rolls: 0, lastPull: null, selectedGacha: 'copper' };
+  state = { coins: initialCoins, inventory: [], rolls: 0, tradeCount: 0, lastPull: null, selectedGacha: 'copper' };
   selectedGacha = gachas[0];
   saveGame();
   render();
@@ -362,6 +474,8 @@ function resetGame() {
 
 document.getElementById('open-gachas').addEventListener('click', () => elements.gachaDialog.showModal());
 document.getElementById('close-gachas').addEventListener('click', () => elements.gachaDialog.close());
+document.getElementById('open-trading').addEventListener('click', () => elements.tradingDialog.showModal());
+document.getElementById('close-trading').addEventListener('click', () => elements.tradingDialog.close());
 elements.rollButton.addEventListener('click', roll);
 elements.sellAll.addEventListener('click', sellAll);
 document.getElementById('reset-game').addEventListener('click', () => elements.resetDialog.showModal());
@@ -369,6 +483,9 @@ document.getElementById('cancel-reset').addEventListener('click', () => elements
 document.getElementById('confirm-reset').addEventListener('click', resetGame);
 elements.gachaDialog.addEventListener('click', event => {
   if (event.target === elements.gachaDialog) elements.gachaDialog.close();
+});
+elements.tradingDialog.addEventListener('click', event => {
+  if (event.target === elements.tradingDialog) elements.tradingDialog.close();
 });
 elements.resetDialog.addEventListener('click', event => {
   if (event.target === elements.resetDialog) elements.resetDialog.close();

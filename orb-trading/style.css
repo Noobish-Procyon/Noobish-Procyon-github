@@ -60,6 +60,7 @@ h1 em { color: var(--lime); font-family: Georgia, "Times New Roman", serif; font
 .gacha-panel, .inventory-panel, .last-pull-panel, .market-note { border: 1px solid var(--line); border-radius: 6px; background: rgba(37, 52, 44, .94); }
 .gacha-panel { padding: 20px 22px 19px; }
 .panel-topline { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.panel-actions { display: flex; align-items: center; gap: 8px; }
 .panel-topline .eyebrow { margin-bottom: 5px; }
 h2, h3, p { margin-top: 0; }
 h2 { margin-bottom: 0; font-size: 20px; line-height: 1.2; }
@@ -97,6 +98,33 @@ h2 { margin-bottom: 0; font-size: 20px; line-height: 1.2; }
 .odds-item strong { color: var(--paper); font-family: var(--font-mono); font-size: 10px; font-weight: 500; }
 .odds-item.zero { opacity: .42; }
 
+.trading-panel { padding: 19px 22px 16px; border: 1px solid var(--line); border-radius: 6px; background: rgba(37, 52, 44, .94); }
+.trading-summary { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+.trade-count { color: var(--quiet); font-family: var(--font-mono); font-size: 9px; white-space: nowrap; }
+.trade-intro { max-width: 650px; margin: 9px 0 14px; color: var(--muted); font-size: 11px; line-height: 1.5; }
+.trade-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; }
+.trade-card { display: grid; gap: 10px; min-width: 0; padding: 12px; border: 1px solid var(--line); border-radius: 4px; background: rgba(10, 20, 15, .2); transition: border-color 150ms ease, background 150ms ease; }
+.trade-card-ready { border-color: rgba(208, 239, 112, .35); background: rgba(208, 239, 112, .035); }
+.trader-header { display: flex; align-items: center; gap: 9px; min-width: 0; }
+.trader-portrait { display: grid; width: 34px; aspect-ratio: 1; flex: 0 0 auto; place-items: center; border: 1px solid color-mix(in srgb, var(--npc-color), transparent 25%); border-radius: 50%; background: radial-gradient(circle at 32% 28%, color-mix(in srgb, var(--npc-color), white 32%), var(--npc-color) 54%, color-mix(in srgb, var(--npc-color), #17231e 55%)); color: #17231e; font-family: Georgia, serif; font-size: 15px; font-weight: 700; }
+.trader-identity { display: grid; min-width: 0; gap: 2px; }
+.trader-identity strong { overflow: hidden; color: var(--paper); font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+.trader-identity span { color: var(--quiet); font-size: 9px; }
+.trade-ready-mark { margin-left: auto; color: var(--lime); font-family: var(--font-mono); font-size: 8px; white-space: nowrap; }
+.trade-card:not(.trade-card-ready) .trade-ready-mark { color: var(--quiet); }
+.trader-note { min-height: 28px; margin: 0; color: var(--muted); font-size: 10px; line-height: 1.45; }
+.trade-exchange { display: grid; grid-template-columns: 1fr 18px 1fr; align-items: center; gap: 4px; padding: 8px; border-radius: 3px; background: rgba(0, 0, 0, .14); }
+.trade-side { display: grid; gap: 4px; min-width: 0; }
+.trade-side > span { color: var(--quiet); font-family: var(--font-mono); font-size: 7px; }
+.trade-side strong { overflow: hidden; color: var(--trade-color); font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
+.trade-side-receive { text-align: right; }
+.trade-arrow { color: var(--lime); font-size: 14px; text-align: center; }
+.trade-button { min-height: 31px; border: 1px solid rgba(208, 239, 112, .42); border-radius: 3px; background: rgba(208, 239, 112, .1); color: var(--lime); cursor: pointer; font-size: 10px; font-weight: 600; transition: background 140ms ease, border-color 140ms ease; }
+.trade-button:hover:not(:disabled) { border-color: var(--lime); background: rgba(208, 239, 112, .19); }
+.trade-button:disabled { border-color: var(--line); background: rgba(255,255,255,.025); color: var(--quiet); cursor: not-allowed; }
+.trade-message { min-height: 13px; margin: 11px 0 0; color: var(--quiet); font-size: 10px; }
+.trade-message-success { color: var(--lime); }
+
 .inventory-panel { min-height: 219px; padding: 19px 22px 21px; }
 .item-count { display: inline-grid; min-width: 21px; height: 21px; place-items: center; margin-left: 5px; border-radius: 50%; background: rgba(208, 239, 112, .14); color: var(--lime); font-family: var(--font-mono); font-size: 10px; vertical-align: 2px; }
 .button-sell-all { min-height: 32px; padding-inline: 10px; color: var(--lime); font-size: 10px; }
@@ -112,6 +140,7 @@ h2 { margin-bottom: 0; font-size: 20px; line-height: 1.2; }
 .orb-token::after { position: absolute; top: 6px; left: 7px; width: 8px; height: 4px; border-radius: 50%; background: rgba(255,255,255,.64); content: ""; filter: blur(1px); transform: rotate(-35deg); }
 .orb-symbol { position: relative; z-index: 1; color: var(--orb-accent); font-family: Georgia, "Times New Roman", serif; font-size: 16px; font-weight: 700; line-height: 1; text-shadow: 0 0 7px color-mix(in srgb, var(--orb-accent), transparent 38%); }
 .orb-token--storm::before { position: absolute; z-index: 2; inset: -7px; display: grid; place-items: start center; color: var(--orb-accent); content: "⚡"; font-family: sans-serif; font-size: 10px; line-height: 1; text-shadow: 0 0 7px var(--orb-accent); transform-origin: center; animation: storm-orbit 1.8s linear infinite; }
+.orb-token--one-of-a-kind::before { position: absolute; z-index: 0; inset: -5px; border: 2px solid color-mix(in srgb, var(--orb-accent), transparent 14%); border-radius: 50%; content: ""; pointer-events: none; animation: one-of-a-kind-pulse 1.8s ease-in-out infinite; }
 .orb-details { min-width: 0; }
 .orb-details h4 { overflow: hidden; margin: 0 0 4px; color: var(--paper); font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
 .orb-details p { margin: 0; color: var(--quiet); font-family: var(--font-mono); font-size: 9px; }
@@ -130,6 +159,7 @@ h2 { margin-bottom: 0; font-size: 20px; line-height: 1.2; }
 .last-pull-content .orb-token::after { top: 11px; left: 14px; width: 13px; height: 7px; }
 .last-pull-content .orb-symbol { font-size: 29px; }
 .last-pull-content .orb-token--storm::before { inset: -8px; font-size: 14px; }
+.last-pull-content .orb-token--one-of-a-kind::before { inset: -8px; border-width: 3px; }
 .market-note { padding: 16px; background: rgba(37, 52, 44, .63); }
 .market-note .eyebrow { margin-bottom: 11px; color: var(--lime); }
 .market-stat { display: flex; align-items: center; justify-content: space-between; padding: 8px 0; border-top: 1px solid var(--line); color: var(--muted); font-size: 11px; }
@@ -140,8 +170,10 @@ h2 { margin-bottom: 0; font-size: 20px; line-height: 1.2; }
 
 footer { display: flex; justify-content: space-between; gap: 16px; margin-top: 28px; padding: 16px 0 25px; border-top: 1px solid var(--line); color: var(--quiet); font-size: 8px; letter-spacing: .6px; }
 
-.gacha-dialog, .confirm-dialog { width: min(900px, calc(100% - 28px)); max-height: min(84vh, 800px); padding: 0; overflow: hidden; border: 1px solid rgba(223, 235, 211, .2); border-radius: 6px; background: #202e27; color: var(--paper); box-shadow: 0 24px 90px rgba(0,0,0,.48); }
-.gacha-dialog::backdrop, .confirm-dialog::backdrop { background: rgba(7, 13, 10, .76); backdrop-filter: blur(4px); }
+.gacha-dialog, .trading-dialog, .confirm-dialog { width: min(900px, calc(100% - 28px)); max-height: min(84vh, 800px); padding: 0; overflow: hidden; border: 1px solid rgba(223, 235, 211, .2); border-radius: 6px; background: #202e27; color: var(--paper); box-shadow: 0 24px 90px rgba(0,0,0,.48); }
+.trading-dialog { width: min(850px, calc(100% - 28px)); }
+.gacha-dialog::backdrop, .trading-dialog::backdrop, .confirm-dialog::backdrop { background: rgba(7, 13, 10, .76); backdrop-filter: blur(4px); }
+.trading-dialog .trading-panel { max-height: calc(84vh - 76px); padding: 16px 20px 14px; overflow-y: auto; border: 0; border-radius: 0; background: transparent; }
 .dialog-header { display: flex; align-items: center; justify-content: space-between; padding: 19px 21px; border-bottom: 1px solid var(--line); }
 .dialog-header .eyebrow { margin-bottom: 5px; color: var(--lime); }
 .close-button { display: grid; width: 32px; height: 32px; place-items: center; border: 1px solid var(--line); border-radius: 50%; background: transparent; color: var(--muted); cursor: pointer; font-size: 21px; line-height: 1; }
@@ -166,11 +198,13 @@ footer { display: flex; justify-content: space-between; gap: 16px; margin-top: 2
 @keyframes float { 0%, 100% { transform: translateY(0) rotate(-7deg); } 50% { transform: translateY(-7px) rotate(6deg); } }
 @keyframes card-in { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes storm-orbit { to { transform: rotate(360deg); } }
+@keyframes one-of-a-kind-pulse { 0%, 100% { opacity: .55; transform: scale(.92); box-shadow: 0 0 5px 1px color-mix(in srgb, var(--orb-accent), transparent 70%); } 50% { opacity: 1; transform: scale(1.12); box-shadow: 0 0 13px 4px color-mix(in srgb, var(--orb-accent), transparent 42%); } }
 
 @media (max-width: 850px) {
   .market-layout { grid-template-columns: minmax(0, 1fr) 225px; }
   .gacha-feature { grid-template-columns: minmax(150px, .8fr) minmax(190px, 1fr); }
   .odds-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .trade-grid { grid-template-columns: 1fr; }
   .orb-card { grid-template-columns: 31px minmax(0, 1fr); }
   .orb-token { width: 30px; }
   .orb-actions { grid-column: 2; display: flex; align-items: center; justify-content: space-between; justify-items: unset; }
@@ -193,6 +227,7 @@ footer { display: flex; justify-content: space-between; gap: 16px; margin-top: 2
   .gacha-feature { grid-template-columns: minmax(120px, .8fr) minmax(170px, 1fr); gap: 12px; }
   .orb-stage { min-height: 165px; }
   .inventory-grid { grid-template-columns: 1fr; }
+  .trade-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .orb-card { grid-template-columns: 34px minmax(0, 1fr) auto; }
   .orb-token { width: 32px; }
   .orb-actions { grid-column: auto; display: grid; justify-items: end; }
@@ -206,6 +241,8 @@ footer { display: flex; justify-content: space-between; gap: 16px; margin-top: 2
   .back-link { margin-left: auto; margin-right: 0; }
   .wallet { min-width: 87px; }
   .wallet-label { font-size: 8px; }
+  .panel-actions { gap: 5px; }
+  .panel-actions .button { gap: 5px; padding-inline: 8px; font-size: 9px; }
   .gacha-feature { grid-template-columns: 1fr; }
   .orb-stage { min-height: 140px; }
   .feature-copy .eyebrow { margin-bottom: 5px; }
@@ -213,6 +250,8 @@ footer { display: flex; justify-content: space-between; gap: 16px; margin-top: 2
   .side-column { grid-template-columns: 1fr; }
   .last-pull-panel { grid-row: auto; }
   .gacha-options { grid-template-columns: 1fr; }
+  .trade-grid { grid-template-columns: 1fr; }
+  .trading-dialog .trading-panel { max-height: calc(84vh - 70px); padding-inline: 13px; }
   .odds-list { gap: 5px; }
   .odds-item { padding: 7px; }
 }
