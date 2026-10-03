@@ -70,12 +70,21 @@ h2 { margin-bottom: 0; font-size: 20px; line-height: 1.2; }
 .button-quiet:hover { border-color: rgba(208, 239, 112, .5); background: rgba(208, 239, 112, .06); }
 .button-icon { color: var(--lime); font-size: 15px; }
 .gacha-feature { display: grid; grid-template-columns: minmax(190px, .85fr) minmax(220px, 1fr); align-items: center; gap: 17px; padding: 18px 0 14px; }
-.orb-stage { position: relative; display: grid; min-height: 195px; overflow: hidden; place-items: center; border: 1px solid rgba(208, 239, 112, .11); border-radius: 4px; background: radial-gradient(ellipse at center, rgba(202, 226, 120, .1), transparent 59%), linear-gradient(135deg, rgba(255,255,255,.03), transparent 70%); }
-.feature-orb { position: relative; z-index: 2; width: 78px; aspect-ratio: 1; border: 1px solid rgba(232, 247, 190, .8); border-radius: 42% 58% 55% 45% / 48% 42% 58% 52%; background: radial-gradient(circle at 33% 27%, #f7ffd0 0 2%, #d0ef70 9%, #93b551 31%, #536f48 62%, #263a30 83%); box-shadow: 0 0 25px rgba(208, 239, 112, .35), inset -9px -11px 20px rgba(19, 33, 27, .58), inset 7px 5px 12px rgba(255, 255, 255, .26); animation: float 4s ease-in-out infinite; }
+.orb-stage { --gacha-highlight: #f0f2ef; --gacha-main: #a8b0ad; --gacha-mid: #767f81; --gacha-deep: #414a4d; --gacha-glow: rgba(188, 198, 194, .3); position: relative; display: grid; min-height: 195px; overflow: hidden; place-items: center; border: 1px solid rgba(208, 239, 112, .11); border-radius: 4px; background: radial-gradient(ellipse at center, color-mix(in srgb, var(--gacha-glow), transparent 72%), transparent 59%), linear-gradient(135deg, rgba(255,255,255,.03), transparent 70%); }
+.orb-stage[data-gacha="iron"] { --gacha-highlight: #c4fff1; --gacha-main: #5ec9b5; --gacha-mid: #347f88; --gacha-deep: #214e64; --gacha-glow: rgba(76, 204, 183, .4); }
+.orb-stage[data-gacha="gold"] { --gacha-highlight: #d9ecff; --gacha-main: #4c83d2; --gacha-mid: #28528e; --gacha-deep: #162e5c; --gacha-glow: rgba(61, 116, 213, .42); }
+.orb-stage[data-gacha="silver"] { --gacha-highlight: #f5d9ff; --gacha-main: #bd86df; --gacha-mid: #8051a6; --gacha-deep: #472e70; --gacha-glow: rgba(164, 99, 211, .4); }
+.orb-stage[data-gacha="platinum"] { --gacha-highlight: #fff8d2; --gacha-main: #e6bf5d; --gacha-mid: #ae7d32; --gacha-deep: #69451e; --gacha-glow: rgba(226, 181, 75, .4); }
+.orb-stage[data-gacha="diamond"] { --gacha-highlight: #ffffff; --gacha-main: #a6e9ef; --gacha-mid: #58a9bc; --gacha-deep: #315d80; --gacha-glow: rgba(129, 223, 236, .42); }
+.orb-stage[data-gacha="iridium"] { --gacha-highlight: #e9ff99; --gacha-main: #7eaa4b; --gacha-mid: #54763c; --gacha-deep: #304b30; --gacha-glow: rgba(126, 170, 75, .42); }
+.orb-stage[data-gacha="bigBang"] { --gacha-highlight: #fff8cb; --gacha-main: #f0d66f; --gacha-mid: #b5e7ff; --gacha-deep: #75b6d3; --gacha-glow: rgba(140, 231, 116, .45); }
+.feature-orb { position: relative; z-index: 2; width: 78px; aspect-ratio: 1; border: 1px solid color-mix(in srgb, var(--gacha-highlight), transparent 25%); border-radius: 42% 58% 55% 45% / 48% 42% 58% 52%; background: radial-gradient(circle at 33% 27%, var(--gacha-highlight) 0 2%, var(--gacha-main) 9%, var(--gacha-mid) 31%, var(--gacha-deep) 83%); box-shadow: 0 0 25px var(--gacha-glow), inset -9px -11px 20px rgba(19, 33, 27, .58), inset 7px 5px 12px rgba(255, 255, 255, .26); animation: float 4s ease-in-out infinite; }
+.orb-stage[data-gacha="bigBang"] .feature-orb { background: radial-gradient(circle at 33% 27%, rgba(255,255,255,.86) 0 2%, transparent 17%), linear-gradient(90deg, #f4d66e 0 50%, #b8e9ff 50% 100%); border-color: #e4f6c5; box-shadow: 0 0 24px rgba(143, 238, 119, .7), 0 0 43px rgba(143, 238, 119, .35), inset -9px -11px 20px rgba(19, 33, 27, .35), inset 7px 5px 12px rgba(255, 255, 255, .38); }
+.orb-stage[data-gacha="bigBang"] .feature-orb::before { position: absolute; inset: -13px; border: 2px solid rgba(164, 255, 133, .88); border-radius: 50%; content: ""; pointer-events: none; animation: gacha-aura 1.8s ease-in-out infinite; }
 .feature-orb span { position: absolute; top: 21%; left: 25%; width: 20px; height: 9px; border-radius: 50%; background: rgba(255,255,255,.54); filter: blur(4px); transform: rotate(-38deg); }
-.orbit { position: absolute; width: 153px; height: 57px; border: 1px solid rgba(208, 239, 112, .43); border-radius: 50%; transform: rotate(-29deg); }
-.orbit-two { width: 168px; height: 70px; border-color: rgba(117, 215, 192, .32); transform: rotate(34deg); }
-.orbit-spark { position: absolute; z-index: 3; width: 5px; height: 5px; border-radius: 50%; background: var(--paper); box-shadow: 0 0 10px 3px rgba(208, 239, 112, .6); }
+.orbit { position: absolute; width: 153px; height: 57px; border: 1px solid color-mix(in srgb, var(--gacha-main), transparent 45%); border-radius: 50%; transform: rotate(-29deg); }
+.orbit-two { width: 168px; height: 70px; border-color: color-mix(in srgb, var(--gacha-highlight), transparent 58%); transform: rotate(34deg); }
+.orbit-spark { position: absolute; z-index: 3; width: 5px; height: 5px; border-radius: 50%; background: var(--gacha-highlight); box-shadow: 0 0 10px 3px var(--gacha-glow); }
 .spark-one { top: 35%; left: 27%; }
 .spark-two { right: 24%; bottom: 30%; width: 3px; height: 3px; }
 .feature-copy .eyebrow { margin-bottom: 8px; color: var(--lime); }
@@ -196,6 +205,7 @@ footer { display: flex; justify-content: space-between; gap: 16px; margin-top: 2
 .button-danger { border-color: rgba(241,129,102,.45); background: rgba(241,129,102,.12); color: #ff9a7e; }
 
 @keyframes float { 0%, 100% { transform: translateY(0) rotate(-7deg); } 50% { transform: translateY(-7px) rotate(6deg); } }
+@keyframes gacha-aura { 0%, 100% { opacity: .55; transform: scale(.94); box-shadow: 0 0 9px 2px rgba(143, 238, 119, .42); } 50% { opacity: 1; transform: scale(1.16); box-shadow: 0 0 18px 6px rgba(143, 238, 119, .78); } }
 @keyframes card-in { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes storm-orbit { to { transform: rotate(360deg); } }
 @keyframes one-of-a-kind-pulse { 0%, 100% { opacity: .55; transform: scale(.92); box-shadow: 0 0 5px 1px color-mix(in srgb, var(--orb-accent), transparent 70%); } 50% { opacity: 1; transform: scale(1.12); box-shadow: 0 0 13px 4px color-mix(in srgb, var(--orb-accent), transparent 42%); } }

@@ -80,6 +80,7 @@ const initialCoins = 5000;
 const saveKey = 'orbTradingSaveV1';
 const elements = {
   balance: document.getElementById('coin-balance'),
+  orbStage: document.getElementById('orb-stage'),
   gachaTitle: document.getElementById('gacha-title'),
   gachaTier: document.getElementById('gacha-tier'),
   gachaDescription: document.getElementById('gacha-description'),
@@ -357,6 +358,7 @@ function renderTrades() {
 
 function render() {
   elements.balance.textContent = formatCoins(state.coins);
+  elements.orbStage.dataset.gacha = selectedGacha.id;
   elements.gachaTitle.textContent = selectedGacha.name;
   elements.gachaTier.textContent = selectedGacha.tier;
   elements.gachaDescription.textContent = selectedGacha.description;
