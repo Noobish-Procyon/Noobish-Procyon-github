@@ -1,12 +1,12 @@
 const rarities = [
-  { id: 'common', name: 'Common', short: 'C', color: '#b7c0b6', sell: 150, orbs: ['Bland', 'Rotating', 'Kilogram'] },
-  { id: 'uncommon', name: 'Uncommon', short: 'UC', color: '#75d7c0', sell: 350, orbs: ['Sand', 'Energy', 'Smoke', 'Shadow'] },
-  { id: 'rare', name: 'Rare', short: 'R', color: '#79aff0', sell: 800, orbs: ['Fire', 'Frost', 'Magnet', 'Sound', 'Wind'] },
-  { id: 'epic', name: 'Epic', short: 'E', color: '#c394f5', sell: 4000, orbs: ['Glass', 'Exploding', 'Photon', 'Dark', 'Magma', 'Blizzard', 'Song', 'Pi'] },
-  { id: 'legendary', name: 'Legendary', short: 'L', color: '#f2bd61', sell: 10000, orbs: ['Chrono', 'Poison', 'Water', 'Storm', 'Meteor', 'Rift', 'Nebula'] },
-  { id: 'mythic', name: 'Mythic', short: 'M', color: '#f1819c', sell: 24000, orbs: ['Prism', 'Summer Triangle', 'Solar', 'Lunarink', 'Gas', 'Angel', 'Celestial'] },
-  { id: 'transcendent', name: 'Transcendent', short: 'T', color: '#d0ef70', sell: 60000, orbs: ['Cyborg', 'Demon', 'Algebra', 'Warp', 'Dino', 'Phoenix', 'Disco'] },
-  { id: 'oneOfAKind', name: 'One of a Kind', short: '1oAK', color: '#fff1a8', sell: 0, orbs: ['Winter Triangle', 'Flame and Frost', 'Procyon Orb'] }
+  { id: 'common', name: 'Common', short: 'C', color: '#b7c0b6', sell: 150, orbs: ['Bland', 'Rotating', 'Kilogram', 'Pebble', 'Dust', 'Plain', 'Tiny', 'Dull', 'Smooth', 'Lopsided', 'Chalk'] },
+  { id: 'uncommon', name: 'Uncommon', short: 'UC', color: '#75d7c0', sell: 350, orbs: ['Sand', 'Energy', 'Smoke', 'Shadow', 'Leaf', 'Echo', 'Mist', 'Copper', 'Bubble', 'Static', 'Moss', 'Ripple'] },
+  { id: 'rare', name: 'Rare', short: 'R', color: '#79aff0', sell: 800, orbs: ['Fire', 'Frost', 'Magnet', 'Sound', 'Wind', 'Gravity', 'Quake', 'Pulse', 'Metal', 'Orbit', 'Crystal', 'Tide', 'Ember'] },
+  { id: 'epic', name: 'Epic', short: 'E', color: '#c394f5', sell: 4000, sellMultiplier: 10, orbs: ['Glass', 'Exploding', 'Photon', 'Dark', 'Magma', 'Blizzard', 'Song', 'Pi', 'Aurora', 'Vortex', 'Void', 'Catalyst', 'Comet', 'Mirage', 'Runic', 'Fission'] },
+  { id: 'legendary', name: 'Legendary', short: 'L', color: '#f2bd61', sell: 10000, sellMultiplier: 10, orbs: ['Chrono', 'Poison', 'Water', 'Storm', 'Meteor', 'Rift', 'Nebula', 'Eclipse', 'Titan', 'Horizon', 'Singularity', 'Tempest', 'Atlas', 'Equinox', 'Starfire'] },
+  { id: 'mythic', name: 'Mythic', short: 'M', color: '#f1819c', sell: 24000, sellMultiplier: 10, orbs: ['Prism', 'Summer Triangle', 'Solar', 'Lunarink', 'Gas', 'Angel', 'Celestial', 'Supernova', 'Galaxy', 'Stardust', 'Zenith', 'Moonstone', 'Infinity', 'Starforge', 'Eventide'] },
+  { id: 'transcendent', name: 'Transcendent', short: 'T', color: '#d0ef70', sell: 60000, sellMultiplier: 10, orbs: ['Cyborg', 'Demon', 'Algebra', 'Warp', 'Dino', 'Phoenix', 'Disco', 'Genesis', 'Eternity', 'Paradox', 'Multiverse', 'Omniscient', 'Ascension', 'Dimension', 'Quantum'] },
+  { id: 'oneOfAKind', name: 'One of a Kind', short: '1oAK', color: '#fff1a8', sell: 0, sellMultiplier: 10, orbs: ['Winter Triangle', 'Flame and Frost', 'Procyon Orb'] }
 ];
 
 const knownOrbNames = new Set(rarities.flatMap(rarity => rarity.orbs));
@@ -14,7 +14,7 @@ const journalMilestones = [
   { id: 'discover-5', total: 5, gems: 1 },
   { id: 'discover-15', total: 15, gems: 2 },
   { id: 'discover-30', total: 30, gems: 5 },
-  { id: 'discover-all', total: 44, gems: 10 }
+  { id: 'discover-all', total: knownOrbNames.size, gems: 10 }
 ];
 const dailyContractTemplates = [
   { id: 'spin-three', title: 'Spin Cycle', description: 'Roll any gacha 3 times', event: 'roll', target: 3, reward: { coins: 500 } },
@@ -69,7 +69,63 @@ const orbSellPrices = {
   Disco: 78000,
   'Winter Triangle': 200000,
   'Flame and Frost': 400000,
-  'Procyon Orb': 600000
+  'Procyon Orb': 600000,
+  Pebble: 225,
+  Dust: 250,
+  Plain: 275,
+  Tiny: 300,
+  Dull: 325,
+  Smooth: 350,
+  Lopsided: 375,
+  Chalk: 400,
+  Leaf: 550,
+  Echo: 600,
+  Mist: 650,
+  Copper: 700,
+  Bubble: 750,
+  Static: 800,
+  Moss: 850,
+  Ripple: 900,
+  Gravity: 1300,
+  Quake: 1400,
+  Pulse: 1500,
+  Metal: 1600,
+  Orbit: 1700,
+  Crystal: 1800,
+  Tide: 1900,
+  Ember: 2000,
+  Aurora: 6400,
+  Vortex: 6700,
+  Void: 7000,
+  Catalyst: 7300,
+  Comet: 7600,
+  Mirage: 7900,
+  Runic: 8200,
+  Fission: 8500,
+  Eclipse: 13500,
+  Titan: 14000,
+  Horizon: 14500,
+  Singularity: 15000,
+  Tempest: 15500,
+  Atlas: 16000,
+  Equinox: 16500,
+  Starfire: 17000,
+  Supernova: 34500,
+  Galaxy: 36000,
+  Stardust: 37500,
+  Zenith: 39000,
+  Moonstone: 40500,
+  Infinity: 42000,
+  Starforge: 43500,
+  Eventide: 45000,
+  Genesis: 81000,
+  Eternity: 84000,
+  Paradox: 87000,
+  Multiverse: 90000,
+  Omniscient: 93000,
+  Ascension: 96000,
+  Dimension: 99000,
+  Quantum: 102000
 };
 
 const orbArt = {
@@ -116,7 +172,63 @@ const orbArt = {
   Disco: { symbol: '✺', color: '#e46ebd', accent: '#a8fff0' },
   'Winter Triangle': { symbol: '❄', color: '#93cae8', accent: '#c5f0ff' },
   'Flame and Frost': { symbol: '✧', color: '#f28743', accent: '#b8e9ff' },
-  'Procyon Orb': { symbol: '✶', color: '#fff0a1', accent: '#fff1a1' }
+  'Procyon Orb': { symbol: '✶', color: '#fff0a1', accent: '#fff1a1' },
+  Pebble: { symbol: '●', color: '#929b92', accent: '#d8dfd4' },
+  Dust: { symbol: '·', color: '#b2aa91', accent: '#f5ecc8' },
+  Plain: { symbol: '○', color: '#a8b1a6', accent: '#e7eee4' },
+  Tiny: { symbol: '▪', color: '#83948a', accent: '#d5e5d8' },
+  Dull: { symbol: '◌', color: '#8d9691', accent: '#d1d8d2' },
+  Smooth: { symbol: '◯', color: '#78a39a', accent: '#dcfff0' },
+  Lopsided: { symbol: '◍', color: '#9e8c72', accent: '#f1d5a6' },
+  Chalk: { symbol: '✧', color: '#c5c6b2', accent: '#fffde5' },
+  Leaf: { symbol: '❧', color: '#62b878', accent: '#dcff9f' },
+  Echo: { symbol: ')))', color: '#5fa9b5', accent: '#d1fbff' },
+  Mist: { symbol: '≋', color: '#9cc6c0', accent: '#effff8' },
+  Copper: { symbol: '◉', color: '#bc784b', accent: '#ffe0a3' },
+  Bubble: { symbol: '○', color: '#65c6cb', accent: '#d5ffff' },
+  Static: { symbol: 'ϟ', color: '#9ca3e2', accent: '#fff8aa' },
+  Moss: { symbol: '❋', color: '#71914b', accent: '#d8f58c' },
+  Ripple: { symbol: '◡', color: '#4d9cb4', accent: '#bff4ff' },
+  Gravity: { symbol: '⊙', color: '#5c74a8', accent: '#d5ddff' },
+  Quake: { symbol: '⌁', color: '#9d795f', accent: '#f7d197' },
+  Pulse: { symbol: '♥', color: '#dc658c', accent: '#ffd2eb' },
+  Metal: { symbol: '▧', color: '#84949d', accent: '#e0f4f6' },
+  Orbit: { symbol: '◎', color: '#536eb3', accent: '#c6e7ff' },
+  Crystal: { symbol: '◇', color: '#79c8d6', accent: '#edffff' },
+  Tide: { symbol: '≈', color: '#438bce', accent: '#b5ecff' },
+  Ember: { symbol: '♨', color: '#e7783d', accent: '#ffe194' },
+  Aurora: { symbol: '✧', color: '#64bcae', accent: '#e3ffd6' },
+  Vortex: { symbol: '◉', color: '#8d5bc6', accent: '#e6c4ff' },
+  Void: { symbol: '●', color: '#38364f', accent: '#bdb2f4' },
+  Catalyst: { symbol: '⚗', color: '#63b587', accent: '#e5ffad' },
+  Comet: { symbol: '☄', color: '#e79552', accent: '#fff0aa' },
+  Mirage: { symbol: '◇', color: '#d58abc', accent: '#fff0fd' },
+  Runic: { symbol: 'ᚱ', color: '#648ab5', accent: '#d2f4ff' },
+  Fission: { symbol: '✹', color: '#df794b', accent: '#fff2a0' },
+  Eclipse: { symbol: '◐', color: '#55536f', accent: '#f8d77d' },
+  Titan: { symbol: '⬟', color: '#b08a55', accent: '#ffe2a1' },
+  Horizon: { symbol: '⊖', color: '#6285b4', accent: '#ffda94' },
+  Singularity: { symbol: '⊙', color: '#4f3d7d', accent: '#f4b9ee' },
+  Tempest: { symbol: 'ϟ', color: '#5574c2', accent: '#fff09a' },
+  Atlas: { symbol: '✥', color: '#bb7751', accent: '#ffe1a3' },
+  Equinox: { symbol: '☯', color: '#9d7ac7', accent: '#fff1a8' },
+  Starfire: { symbol: '✹', color: '#eb7245', accent: '#fff3a0' },
+  Supernova: { symbol: '✹', color: '#ed7b50', accent: '#fff3a0' },
+  Galaxy: { symbol: '✺', color: '#ac68c9', accent: '#ffc9f4' },
+  Stardust: { symbol: '⁕', color: '#d8b965', accent: '#fff7c5' },
+  Zenith: { symbol: '✦', color: '#77b8d2', accent: '#f4ffcb' },
+  Moonstone: { symbol: '◐', color: '#7c83b4', accent: '#e3e2ff' },
+  Infinity: { symbol: '∞', color: '#64bcb6', accent: '#ddfff0' },
+  Starforge: { symbol: '⚒', color: '#d07955', accent: '#fff0a0' },
+  Eventide: { symbol: '☾', color: '#555b93', accent: '#efcef4' },
+  Genesis: { symbol: '✧', color: '#9ad05e', accent: '#fff7a5' },
+  Eternity: { symbol: '∞', color: '#79b7d0', accent: '#e2fff9' },
+  Paradox: { symbol: '⧖', color: '#bd72ca', accent: '#ffe0ff' },
+  Multiverse: { symbol: '✺', color: '#7da8d4', accent: '#f4d2ff' },
+  Omniscient: { symbol: '◉', color: '#d0a84f', accent: '#fff7b8' },
+  Ascension: { symbol: '⇧', color: '#8bca85', accent: '#f1ffc1' },
+  Dimension: { symbol: '▧', color: '#9276c5', accent: '#e9d6ff' },
+  Quantum: { symbol: '⌘', color: '#62c6bb', accent: '#fff2a5' }
 };
 
 const gachas = [
@@ -131,11 +243,10 @@ const gachas = [
   { id: 'commonOnly', name: 'Common Only', cost: 150, tier: 'RARITY LOCKED', description: 'Every roll is guaranteed to be Common.', odds: [100, 0, 0, 0, 0, 0, 0, 0] },
   { id: 'uncommonOnly', name: 'Uncommon Only', cost: 350, tier: 'RARITY LOCKED', description: 'Every roll is guaranteed to be Uncommon.', odds: [0, 100, 0, 0, 0, 0, 0, 0] },
   { id: 'rareOnly', name: 'Rare Only', cost: 800, tier: 'RARITY LOCKED', description: 'Every roll is guaranteed to be Rare.', odds: [0, 0, 100, 0, 0, 0, 0, 0] },
-  { id: 'epicOnly', name: 'Epic Only', cost: 2000, tier: 'RARITY LOCKED', description: 'Every roll is guaranteed to be Epic.', odds: [0, 0, 0, 100, 0, 0, 0, 0] },
-  { id: 'legendaryOnly', name: 'Legendary Only', cost: 8000, tier: 'RARITY LOCKED', description: 'Every roll is guaranteed to be Legendary.', odds: [0, 0, 0, 0, 100, 0, 0, 0] },
-  { id: 'mythicOnly', name: 'Mythic Only', cost: 20000, tier: 'RARITY LOCKED', description: 'Every roll is guaranteed to be Mythic.', odds: [0, 0, 0, 0, 0, 100, 0, 0] },
-  { id: 'transcendentOnly', name: 'Transcendent Only', cost: 60000, tier: 'RARITY LOCKED', description: 'Every roll is guaranteed to be Transcendent.', odds: [0, 0, 0, 0, 0, 0, 100, 0] },
-  { id: 'oneOfAKindOnly', name: 'One of a Kind Only', cost: 200000, tier: 'RARITY LOCKED', description: 'Every roll is One of a Kind: 60% Winter Triangle, 30% Flame and Frost, 10% Procyon Orb.', odds: [0, 0, 0, 0, 0, 0, 0, 100] }
+  { id: 'epicOnly', name: 'Epic Only', cost: 10000, tier: 'RARITY LOCKED', description: 'Every roll is guaranteed to be Epic.', odds: [0, 0, 0, 100, 0, 0, 0, 0] },
+  { id: 'legendaryOnly', name: 'Legendary Only', cost: 40000, tier: 'RARITY LOCKED', description: 'Every roll is guaranteed to be Legendary.', odds: [0, 0, 0, 0, 100, 0, 0, 0] },
+  { id: 'mythicOnly', name: 'Mythic Only', cost: 100000, tier: 'RARITY LOCKED', description: 'Every roll is guaranteed to be Mythic.', odds: [0, 0, 0, 0, 0, 100, 0, 0] },
+  { id: 'transcendentOnly', name: 'Transcendent Only', cost: 300000, tier: 'RARITY LOCKED', description: 'Every roll is guaranteed to be Transcendent.', odds: [0, 0, 0, 0, 0, 0, 100, 0] }
 ];
 
 const npcTrades = [
@@ -300,7 +411,7 @@ function applySale(baseAmount, orbCount, rareOrbCount = 0) {
 }
 
 function getOrbPrice(rarity, orbName) {
-  return orbSellPrices[orbName] ?? rarity.sell;
+  return (orbSellPrices[orbName] ?? rarity.sell) * (rarity.sellMultiplier || 1);
 }
 
 function getStockPrice(rarity, orbName) {
