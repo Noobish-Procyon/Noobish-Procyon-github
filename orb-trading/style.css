@@ -193,7 +193,7 @@ h2 { margin-bottom: 0; font-size: 20px; line-height: 1.2; }
 .inventory-empty > span { color: var(--quiet); font-size: 10px; }
 .inventory-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-top: 17px; }
 .orb-card { display: grid; grid-template-columns: 36px minmax(0, 1fr) auto; align-items: center; gap: 10px; min-width: 0; padding: 10px; border: 1px solid var(--line); border-radius: 4px; background: rgba(10, 20, 15, .22); animation: card-in 180ms ease-out both; }
-.orb-token { position: relative; display: grid; width: 34px; aspect-ratio: 1; place-items: center; border: 1px solid color-mix(in srgb, var(--orb-accent), transparent 35%); border-radius: 43% 57% 52% 48%; background: radial-gradient(circle at 31% 25%, white 0 3%, var(--orb-color) 13%, color-mix(in srgb, var(--orb-color), #15231c 55%) 76%); box-shadow: 0 0 12px color-mix(in srgb, var(--orb-color), transparent 70%), inset -4px -5px 8px rgba(0,0,0,.38); }
+.orb-token { position: relative; display: grid; width: 34px; aspect-ratio: 1; place-items: center; border: 1px solid color-mix(in srgb, var(--orb-accent), transparent 35%); border-radius: 43% 57% 52% 48%; background: radial-gradient(circle at 31% 25%, white 0 3%, var(--orb-color) 13%, color-mix(in srgb, var(--orb-color), #15231c 55%) 76%); box-shadow: 0 0 12px color-mix(in srgb, var(--orb-color), transparent 70%), inset -4px -5px 8px rgba(0,0,0,.38); animation: orb-idle 3.6s ease-in-out infinite; }
 .orb-token::after { position: absolute; top: 6px; left: 7px; width: 8px; height: 4px; border-radius: 50%; background: rgba(255,255,255,.64); content: ""; filter: blur(1px); transform: rotate(-35deg); }
 .orb-symbol { position: relative; z-index: 1; color: var(--orb-accent); font-family: Georgia, "Times New Roman", serif; font-size: 16px; font-weight: 700; line-height: 1; text-shadow: 0 0 7px color-mix(in srgb, var(--orb-accent), transparent 38%); }
 .orb-token--storm::before { position: absolute; z-index: 2; inset: -7px; display: grid; place-items: start center; color: var(--orb-accent); content: "⚡"; font-family: sans-serif; font-size: 10px; line-height: 1; text-shadow: 0 0 7px var(--orb-accent); transform-origin: center; animation: storm-orbit 1.8s linear infinite; }
@@ -341,6 +341,7 @@ footer { display: flex; justify-content: space-between; gap: 16px; margin-top: 2
 .button-danger { border-color: rgba(241,129,102,.45); background: rgba(241,129,102,.12); color: #ff9a7e; }
 
 @keyframes float { 0%, 100% { transform: translateY(0) rotate(-7deg); } 50% { transform: translateY(-7px) rotate(6deg); } }
+@keyframes orb-idle { 0%, 100% { transform: translateY(0) rotate(-4deg); } 50% { transform: translateY(-2px) rotate(4deg); } }
 @keyframes gacha-aura { 0%, 100% { opacity: .55; transform: scale(.94); box-shadow: 0 0 9px 2px rgba(143, 238, 119, .42); } 50% { opacity: 1; transform: scale(1.16); box-shadow: 0 0 18px 6px rgba(143, 238, 119, .78); } }
 @keyframes card-in { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes orb-roll-tick { from { opacity: .7; filter: blur(1px); transform: scale(.72) rotate(-24deg); } to { opacity: 1; filter: blur(0); transform: scale(1) rotate(0); } }

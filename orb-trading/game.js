@@ -6,7 +6,7 @@ const rarities = [
   { id: 'legendary', name: 'Legendary', short: 'L', color: '#f2bd61', sell: 10000, sellMultiplier: 10, orbs: ['Chrono', 'Poison', 'Water', 'Storm', 'Meteor', 'Rift', 'Nebula', 'Eclipse', 'Titan', 'Horizon', 'Singularity', 'Tempest', 'Atlas', 'Equinox', 'Starfire'] },
   { id: 'mythic', name: 'Mythic', short: 'M', color: '#f1819c', sell: 24000, sellMultiplier: 10, orbs: ['Prism', 'Summer Triangle', 'Solar', 'Lunarink', 'Gas', 'Angel', 'Celestial', 'Supernova', 'Galaxy', 'Stardust', 'Zenith', 'Moonstone', 'Infinity', 'Starforge', 'Eventide'] },
   { id: 'transcendent', name: 'Transcendent', short: 'T', color: '#d0ef70', sell: 60000, sellMultiplier: 10, orbs: ['Cyborg', 'Demon', 'Algebra', 'Warp', 'Dino', 'Phoenix', 'Disco', 'Genesis', 'Eternity', 'Paradox', 'Multiverse', 'Omniscient', 'Ascension', 'Dimension', 'Quantum'] },
-  { id: 'oneOfAKind', name: 'One of a Kind', short: '1oAK', color: '#fff1a8', sell: 0, sellMultiplier: 10, orbs: ['Winter Triangle', 'Flame and Frost', 'Procyon Orb'] }
+  { id: 'oneOfAKind', name: 'One of a Kind', short: '1oAK', color: '#fff1a8', sell: 0, sellMultiplier: 10, orbs: ['Winter Triangle', 'Flame and Frost', 'Astral Crown', 'Starheart', 'Cosmic Key', 'Procyon Orb'] }
 ];
 
 const knownOrbNames = new Set(rarities.flatMap(rarity => rarity.orbs));
@@ -69,7 +69,10 @@ const orbSellPrices = {
   Disco: 78000,
   'Winter Triangle': 200000,
   'Flame and Frost': 400000,
-  'Procyon Orb': 600000,
+  'Astral Crown': 800000,
+  Starheart: 1000000,
+  'Cosmic Key': 1200000,
+  'Procyon Orb': 4200000,
   Pebble: 225,
   Dust: 250,
   Plain: 275,
@@ -172,6 +175,9 @@ const orbArt = {
   Disco: { symbol: '✺', color: '#e46ebd', accent: '#a8fff0' },
   'Winter Triangle': { symbol: '❄', color: '#93cae8', accent: '#c5f0ff' },
   'Flame and Frost': { symbol: '✧', color: '#f28743', accent: '#b8e9ff' },
+  'Astral Crown': { symbol: '♕', color: '#e7c65d', accent: '#fff7bd' },
+  Starheart: { symbol: '♥', color: '#df6b91', accent: '#ffe0ec' },
+  'Cosmic Key': { symbol: '⚿', color: '#8b78d5', accent: '#e5d5ff' },
   'Procyon Orb': { symbol: '✶', color: '#fff0a1', accent: '#fff1a1' },
   Pebble: { symbol: '●', color: '#929b92', accent: '#d8dfd4' },
   Dust: { symbol: '·', color: '#b2aa91', accent: '#f5ecc8' },
@@ -1040,9 +1046,9 @@ function rollOrb(rarity) {
 
 function rollOneOfAKind() {
   const roll = Math.random();
-  if (roll < .6) return 'Winter Triangle';
-  if (roll < .9) return 'Flame and Frost';
-  return 'Procyon Orb';
+  if (roll >= .95) return 'Procyon Orb';
+  const commonOrbs = rarities.find(rarity => rarity.id === 'oneOfAKind').orbs.filter(name => name !== 'Procyon Orb');
+  return commonOrbs[Math.floor(Math.random() * commonOrbs.length)];
 }
 
 function makeTrade(tradeIndex) {
