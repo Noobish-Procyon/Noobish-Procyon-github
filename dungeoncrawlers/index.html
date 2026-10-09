@@ -28,7 +28,7 @@
       </aside>
       <section class="arena-wrap">
         <div class="arena-head"><span id="room-name">THE SUNKEN VESTIBULE</span><span id="wave-status">CLEAR THE ROOM</span></div>
-        <div class="canvas-frame"><canvas id="game-canvas" aria-label="Circlebound dungeon game"></canvas><div class="canvas-hint" id="canvas-hint">WASD / ARROWS TO MOVE</div></div>
+        <div class="canvas-frame"><canvas id="game-canvas" aria-label="Circlebound dungeon game"></canvas><div class="canvas-hint" id="canvas-hint">WASD / ARROWS TO MOVE</div><div class="mobile-controls" id="mobile-controls" aria-label="Mobile game controls"><div class="virtual-stick" id="move-stick" aria-label="Movement joystick"><div class="virtual-stick-knob"></div></div><button class="mobile-dash" id="mobile-dash" type="button">DASH</button></div></div>
         <div class="arena-foot"><span><i class="key">WASD</i> MOVE</span><span><i class="key">SPACE</i> DASH</span><span><i class="key">R</i> NEW RUN</span></div>
       </section>
       <aside class="control-panel">
@@ -43,6 +43,7 @@
   </main>
   <div class="modal hidden" id="end-modal"><div class="modal-inner"><p class="eyebrow">RUN COMPLETE</p><h2 id="end-title">THE DUNGEON REMEMBERS</h2><p id="end-copy">Your circle made it further than most.</p><button class="primary-button" id="restart-button">START A NEW RUN <span>↗</span></button></div></div>
   <div class="modal hidden" id="upgrade-modal"><div class="modal-inner"><p class="eyebrow">ROOM CLEARED / CHOOSE ONE</p><h2>CLAIM A RELIC</h2><div class="upgrade-choices"><button class="upgrade-choice" data-upgrade="vitality"><strong>VITALITY</strong><span>Restore 25 vitality</span></button><button class="upgrade-choice" data-upgrade="power"><strong>SHARP EDGE</strong><span>Deal 20% more damage</span></button><button class="upgrade-choice" data-upgrade="haste"><strong>QUICKEN</strong><span>Fire 15% faster</span></button></div></div></div>
+  <div class="modal controls-modal" id="controls-modal"><div class="modal-inner" role="dialog" aria-modal="true" aria-labelledby="controls-title"><p class="eyebrow">CIRCLEBOUND / CONTROL SETUP</p><h2 id="controls-title">CHOOSE YOUR CONTROLS</h2><p>Choose how you want to move through the dungeon.</p><div class="control-options"><button type="button" data-control-mode="mobile"><strong>MOBILE</strong><span>Joystick + dash button</span></button><button type="button" data-control-mode="computer"><strong>COMPUTER</strong><span>WASD / arrows + space to dash</span></button></div></div></div>
   <script src="game.js"></script>
 </body>
 </html>

@@ -7,6 +7,8 @@ canvas.height = window.innerHeight;
 // Game state
 const game = {
     running: true,
+    controlsChosen: false,
+    controlMode: null,
     paused: false,
     score: 0,
     wave: 1,
@@ -208,7 +210,7 @@ const game = {
     },
     
     update() {
-        if (this.paused) return;
+        if (!this.controlsChosen || this.paused) return;
         
         // Player movement
         const keys = this.keysPressed;
@@ -928,8 +930,88 @@ const game = {
 
 const isXKey = (e) => e.code === 'KeyX' || e.key === 'x' || e.key === 'X' || (e.key && e.key.toLowerCase && e.key.toLowerCase() === 'x');
 
+document.querySelectorAll('[data-control-mode]').forEach((button) => {
+    button.addEventListener('click', () => {
+        game.controlMode = button.dataset.controlMode;
+        game.controlsChosen = true;
+        document.getElementById('controlsModal').remove();
+        document.body.classList.toggle('mobile-mode', game.controlMode === 'mobile');
+    });
+});
+
+const moveStick = document.getElementById('moveStick');
+const moveKnob = moveStick.querySelector('.virtual-stick-knob');
+let stickPointer = null;
+function releaseStick() {
+    stickPointer = null;
+    moveKnob.style.transform = 'translate(-50%, -50%)';
+    ['w', 'a', 's', 'd'].forEach(key => game.keysPressed[key] = false);
+}
+moveStick.addEventListener('pointerdown', event => {
+    event.preventDefault();
+    stickPointer = event.pointerId;
+    moveStick.setPointerCapture(stickPointer);
+    moveJoystick(event);
+});
+moveStick.addEventListener('pointermove', event => {
+    if (event.pointerId === stickPointer) moveJoystick(event);
+});
+moveStick.addEventListener('pointerup', releaseStick);
+moveStick.addEventListener('pointercancel', releaseStick);
+function moveJoystick(event) {
+    const bounds = moveStick.getBoundingClientRect();
+    const limit = bounds.width * .34;
+    const dx = event.clientX - (bounds.left + bounds.width / 2);
+    const dy = event.clientY - (bounds.top + bounds.height / 2);
+    const length = Math.hypot(dx, dy);
+    const scale = length > limit ? limit / length : 1;
+    const x = dx * scale;
+    const y = dy * scale;
+    moveKnob.style.transform = `translate(calc(-50% + ${x}px), calc(-50% + ${y}px))`;
+    game.keysPressed.d = x > 12;
+    game.keysPressed.a = x < -12;
+    game.keysPressed.s = y > 12;
+    game.keysPressed.w = y < -12;
+}
+
+document.querySelectorAll('[data-ability]').forEach(button => {
+    const ability = button.dataset.ability;
+    const begin = event => {
+        event.preventDefault();
+        event.stopPropagation();
+        if (!game.controlsChosen || game.controlMode !== 'mobile') return;
+        if (ability === 'q') {
+            if (game.player.transformActive) game.voidBurst();
+            else game.startNovaCharge();
+        } else if (ability === 'z') {
+            if (game.player.transformActive) game.laserBarrage();
+            else game.startLaserCharge();
+        } else if (ability === 'e') {
+            game.player.transformActive ? game.reflectBarrier() : game.shieldAbility();
+        } else if (ability === 'Shift') {
+            game.blinkStrike();
+        } else if (ability === 'v') {
+            game.transformAbility();
+        } else if (ability === 'x') {
+            game.player.transformActive ? game.voidShockwave() : game.xMove();
+        } else if (ability === 'c') {
+            game.player.transformActive ? game.shatter() : game.cProjectile();
+        }
+    };
+    const finish = event => {
+        event.preventDefault();
+        event.stopPropagation();
+        if (ability === 'q' && !game.player.transformActive) game.launchNovaProjectile();
+        if (ability === 'z' && !game.player.transformActive) game.releaseLaserProjectile();
+    };
+    button.addEventListener('pointerdown', begin);
+    button.addEventListener('pointerup', finish);
+    button.addEventListener('pointercancel', finish);
+});
+
 // Input handling
 document.addEventListener('keydown', (e) => {
+    if (!game.controlsChosen) return;
     game.keysPressed[e.key] = true;
     
     if (e.key === ' ') {
@@ -968,13 +1050,15 @@ document.addEventListener('keyup', (e) => {
 });
 
 // Click to charge nova
-document.addEventListener('click', () => {
+document.addEventListener('click', (event) => {
+    if (event.target.closest('#mobileControls, #controlsModal, #pauseMenu')) return;
     if (!game.paused && game.running) {
         game.startNovaCharge();
     }
 });
 
-document.addEventListener('mouseup', () => {
+document.addEventListener('mouseup', (event) => {
+    if (event.target.closest('#mobileControls, #controlsModal, #pauseMenu')) return;
     if (!game.paused && game.running) {
         game.launchNovaProjectile();
     }

@@ -1,36 +1,100 @@
 <!DOCTYPE html>
 <html>
 <head>
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Shape Summoner</title>
 <style>
-body { margin:0; overflow:hidden; background:#111; }
+body { margin:0; overflow:hidden; background:#071019; color:#e8f4f1; font-family:Arial,sans-serif; }
+button { font: inherit; }
 
 canvas {
   display:block;
   width:100vw;
   height:100vh;
-  border:4px solid #444;
+  touch-action:none;
+  border:0;
   box-sizing:border-box;
-  box-shadow:0 0 20px #000;
+  cursor:crosshair;
 }
 
 #saveHint {
   position:fixed;
-  left:10px;
-  bottom:10px;
-  color:#ccc;
-  font-family:Arial, sans-serif;
-  font-size:14px;
+  left:18px;
+  bottom:16px;
+  z-index:4;
+  padding:10px 14px;
+  border:1px solid #7de9bd44;
+  border-radius:10px;
+  background:linear-gradient(135deg,#10232be8,#0c171de8);
+  color:#a9c8c2;
+  font:11px "Courier New",monospace;
+  letter-spacing:.04em;
+  box-shadow:0 8px 26px #0005;
 }
+
+.controls-modal {
+  position:fixed; inset:0; z-index:10; display:grid; place-items:center;
+  padding:20px; background:rgba(0,0,0,.88); color:#fff; font-family:Arial,sans-serif;
+}
+.controls-dialog {
+  width:min(460px,100%); padding:30px; border:1px solid #75e6a577; border-radius:16px;
+  background:linear-gradient(145deg,#142b30,#101921); text-align:center; box-shadow:0 24px 80px #000a,0 0 40px #75e6a51c;
+}
+.controls-dialog h1 { margin:0 0 10px; color:#e7fff2; font-size:clamp(24px,6vw,38px); letter-spacing:.04em; }
+.controls-dialog p { margin:0 0 22px; color:#9ebbb3; }
+.control-options { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+.control-options button { min-height:90px; border:1px solid #75e6a566; border-radius:10px; background:linear-gradient(140deg,#1c3836,#17252d); color:white; cursor:pointer; transition:transform .16s,border-color .16s,box-shadow .16s; }
+.control-options button:hover { transform:translateY(-3px); border-color:#75e6a5; box-shadow:0 10px 24px #0005; }
+.control-options strong,.control-options span { display:block; }
+.control-options strong { margin-bottom:7px; color:#75e6a5; }
+.control-options span { font-size:12px; }
+.mobile-controls { display:none; }
+body.mobile-mode .mobile-controls { display:flex; }
+.mobile-controls { position:fixed; inset:0; z-index:5; justify-content:space-between; align-items:flex-end; padding:16px; pointer-events:none; font-family:Arial,sans-serif; }
+.virtual-stick { position:relative; width:112px; height:112px; margin:0 0 4px 4px; border:2px solid #75e6a577; border-radius:50%; background:radial-gradient(circle,#75e6a522,#102027aa); box-shadow:0 0 24px #75e6a51c,inset 0 0 20px #75e6a51a; pointer-events:auto; touch-action:none; }
+.virtual-stick-knob { position:absolute; top:50%; left:50%; width:48px; height:48px; border:2px solid #75e6a5; border-radius:50%; background:#75e6a555; transform:translate(-50%,-50%); pointer-events:none; }
+.mobile-action-pad { display:grid; grid-template-columns:repeat(2,64px); gap:7px; pointer-events:auto; }
+.mobile-action-pad button { min-height:48px; padding:4px; border:1px solid #75e6a577; border-radius:10px; background:linear-gradient(145deg,#19353aee,#101a22ee); color:#d8f6eb; font-size:10px; font-weight:700; letter-spacing:.04em; box-shadow:0 6px 18px #0007; touch-action:none; }
+.mobile-action-pad button:active,.mobile-action-pad .selected { border-color:#75e6a5; background:linear-gradient(145deg,#75e6a5,#39af9a); color:#071019; }
+body.mobile-mode #saveHint { display:none; }
+@media(max-width:520px) { .controls-dialog { padding:24px 18px; } .mobile-controls { padding:10px; } .virtual-stick { width:96px;height:96px; } .virtual-stick-knob { width:42px;height:42px; } .mobile-action-pad { grid-template-columns:repeat(2,56px); gap:5px; } .mobile-action-pad button { min-height:42px;font-size:10px; } }
 </style>
 </head>
 <body>
 <canvas id="game"></canvas>
 <div id="saveHint">Press [F] to save — auto‑save every 10s — [ESC] for pause</div>
+<div id="controlsModal" class="controls-modal">
+  <div class="controls-dialog" role="dialog" aria-modal="true" aria-labelledby="controlsTitle">
+    <h1 id="controlsTitle">Choose your controls</h1>
+    <p>Pick how you want to play Shape Summoner.</p>
+    <div class="control-options">
+      <button type="button" data-control-mode="mobile"><strong>Mobile</strong><span>Joystick + action buttons</span></button>
+      <button type="button" data-control-mode="computer"><strong>Computer</strong><span>WASD + keyboard and mouse</span></button>
+    </div>
+  </div>
+</div>
+<div id="mobileControls" class="mobile-controls" aria-label="Mobile game controls">
+  <div id="moveStick" class="virtual-stick" aria-label="Movement joystick"><div class="virtual-stick-knob"></div></div>
+  <div class="mobile-action-pad">
+    <button type="button" data-shape="1" class="selected">CIRCLE</button>
+    <button type="button" data-shape="2">SQUARE</button>
+    <button type="button" data-shape="3">TRIANGLE</button>
+    <button type="button" data-shape="4">STAR</button>
+    <button type="button" id="mobileFire">FIRE</button>
+    <button type="button" id="mobileSummon">SUMMON</button>
+    <button type="button" id="mobilePause">PAUSE</button>
+  </div>
+</div>
 
 <script>
 const c = document.getElementById("game");
 const x = c.getContext("2d");
+const stars = Array.from({ length: 110 }, () => ({
+  x: Math.random(),
+  y: Math.random(),
+  radius: .4 + Math.random() * 1.2,
+  phase: Math.random() * Math.PI * 2
+}));
 
 function resize() {
   c.width = innerWidth;
@@ -80,6 +144,8 @@ let cards = [];
 let bossDropText = "";
 let paused = false;
 let currentSlot = 1;
+let controlsChosen = false;
+let controlMode = null;
 
 // UPGRADES
 const upgrades = [
@@ -193,11 +259,81 @@ function spawnBoss() {
 }
 
 setInterval(() => {
-  if (!boss && !dead && !choose && !paused) spawnBoss();
+  if (controlsChosen && !boss && !dead && !choose && !paused) spawnBoss();
 }, 6000);
+
+document.querySelectorAll("[data-control-mode]").forEach(button => {
+  button.addEventListener("click", () => {
+    controlMode = button.dataset.controlMode;
+    controlsChosen = true;
+    document.getElementById("controlsModal").remove();
+    document.body.classList.toggle("mobile-mode", controlMode === "mobile");
+    if (controlMode === "mobile") lastX = p.x + 100;
+  });
+});
+
+const moveStick = document.getElementById("moveStick");
+const moveKnob = moveStick.querySelector(".virtual-stick-knob");
+let stickPointer = null;
+function moveJoystick(event) {
+  const bounds = moveStick.getBoundingClientRect();
+  const limit = bounds.width * .34;
+  const dx = event.clientX - (bounds.left + bounds.width / 2);
+  const dy = event.clientY - (bounds.top + bounds.height / 2);
+  const length = Math.hypot(dx, dy);
+  const scale = length > limit ? limit / length : 1;
+  const x = dx * scale, y = dy * scale;
+  moveKnob.style.transform = `translate(calc(-50% + ${x}px),calc(-50% + ${y}px))`;
+  keys.d = x > 10; keys.a = x < -10; keys.s = y > 10; keys.w = y < -10;
+  if (Math.hypot(x, y) > 10) {
+    const angle = Math.atan2(y, x);
+    lastX = p.x + Math.cos(angle) * 100;
+    lastY = p.y + Math.sin(angle) * 100;
+  }
+}
+function resetJoystick() {
+  stickPointer = null;
+  moveKnob.style.transform = "translate(-50%,-50%)";
+  keys.w = keys.a = keys.s = keys.d = false;
+}
+moveStick.addEventListener("pointerdown", event => {
+  event.preventDefault(); stickPointer = event.pointerId;
+  moveStick.setPointerCapture(stickPointer); moveJoystick(event);
+});
+moveStick.addEventListener("pointermove", event => { if (event.pointerId === stickPointer) moveJoystick(event); });
+moveStick.addEventListener("pointerup", resetJoystick);
+moveStick.addEventListener("pointercancel", resetJoystick);
+document.querySelectorAll("[data-shape]").forEach(button => button.addEventListener("click", event => {
+  event.stopPropagation(); shape = Number(button.dataset.shape);
+  document.querySelectorAll("[data-shape]").forEach(option => option.classList.toggle("selected", option === button));
+}));
+document.getElementById("mobileFire").addEventListener("pointerdown", event => {
+  event.preventDefault();
+  event.stopPropagation();
+  const target = boss;
+  if (target) {
+    lastX = target.x;
+    lastY = target.y;
+  }
+  shoot();
+});
+function summonInFront() {
+  const angle = Math.atan2(lastY - p.y, lastX - p.x);
+  const x = Math.max(20, Math.min(c.width - 20, p.x + Math.cos(angle) * 110));
+  const y = Math.max(20, Math.min(c.height - 20, p.y + Math.sin(angle) * 110));
+  summonAt(x, y);
+}
+document.getElementById("mobileSummon").addEventListener("pointerdown", event => {
+  event.preventDefault(); event.stopPropagation(); summonInFront();
+});
+document.getElementById("mobilePause").addEventListener("pointerdown", event => {
+  event.preventDefault(); event.stopPropagation(); paused = !paused;
+  event.currentTarget.textContent = paused ? "RESUME" : "PAUSE";
+});
 
 // INPUT
 onkeydown = e => {
+  if (!controlsChosen) return;
   keys[e.key] = true;
 
   if (e.key === "Escape") {
@@ -247,7 +383,18 @@ function offerDragonCards() {
   }
 }
 
+function summonAt(summonX, summonY) {
+  if (dead || choose || paused || p.mana < p.sCost) return;
+  p.mana -= p.sCost;
+  sums.push({
+    x: summonX, y: summonY, r: 20,
+    col: `hsl(${Math.random()*360},80%,60%)`, sh: shape, hp: 10
+  });
+  fuseSummons();
+}
+
 onclick = e => {
+  if (e.target.closest("#mobileControls, #controlsModal")) return;
   if (paused) {
     const w = 200, h = 80, g = 40;
     const sx = c.width/2 - (w*1.5 + g);
@@ -288,21 +435,7 @@ onclick = e => {
     return;
   }
 
-  if (dead) return;
-
-  if (p.mana < p.sCost) return;
-
-  p.mana -= p.sCost;
-
-  sums.push({
-    x: e.clientX, y: e.clientY,
-    r: 20,
-    col: `hsl(${Math.random()*360},80%,60%)`,
-    sh: shape,
-    hp: 10
-  });
-
-  fuseSummons();
+  summonAt(e.clientX, e.clientY);
 };
 
 function shoot() {
@@ -340,10 +473,26 @@ function shoot() {
 
 // UTIL
 function drawSummon(s) {
-  x.fillStyle = s.col;
+  x.save();
+  x.shadowColor = s.col;
+  x.shadowBlur = Math.min(28, 10 + s.r * .3);
+  const gradient = x.createRadialGradient(s.x - s.r * .3, s.y - s.r * .35, 1, s.x, s.y, s.r);
+  gradient.addColorStop(0, "#ffffff");
+  gradient.addColorStop(.16, s.col);
+  gradient.addColorStop(1, "#101a2a");
+  x.fillStyle = gradient;
   x.beginPath();
   x.arc(s.x, s.y, s.r, 0, Math.PI * 2);
   x.fill();
+  x.shadowBlur = 0;
+  x.strokeStyle = s.col;
+  x.lineWidth = Math.max(1.5, s.r * .07);
+  x.stroke();
+  x.beginPath();
+  x.arc(s.x - s.r * .3, s.y - s.r * .34, Math.max(1.5, s.r * .14), 0, Math.PI * 2);
+  x.fillStyle = "rgba(255,255,255,.72)";
+  x.fill();
+  x.restore();
 }
 
 function fuseSummons() {
@@ -574,6 +723,34 @@ function update() {
 function draw() {
   x.setTransform(1,0,0,1,0,0);
   x.clearRect(0,0,c.width,c.height);
+  const background = x.createLinearGradient(0, 0, c.width, c.height);
+  background.addColorStop(0, "#091822");
+  background.addColorStop(.55, "#101b2b");
+  background.addColorStop(1, "#11162a");
+  x.fillStyle = background;
+  x.fillRect(0, 0, c.width, c.height);
+  const ambient = x.createRadialGradient(c.width * .5, c.height * .48, 20, c.width * .5, c.height * .48, Math.max(c.width, c.height) * .7);
+  ambient.addColorStop(0, "rgba(36,115,113,.13)");
+  ambient.addColorStop(1, "rgba(3,8,14,.42)");
+  x.fillStyle = ambient;
+  x.fillRect(0, 0, c.width, c.height);
+  const now = performance.now();
+  stars.forEach(star => {
+    const alpha = .2 + (Math.sin(now / 750 + star.phase) + 1) * .18;
+    x.fillStyle = `rgba(207,255,237,${alpha})`;
+    x.beginPath();
+    x.arc(star.x * c.width, star.y * c.height, star.radius, 0, Math.PI * 2);
+    x.fill();
+  });
+  x.strokeStyle = "rgba(129,211,191,.045)";
+  x.lineWidth = 1;
+  const gridSize = 48;
+  for (let gridX = 0; gridX < c.width; gridX += gridSize) {
+    x.beginPath(); x.moveTo(gridX, 0); x.lineTo(gridX, c.height); x.stroke();
+  }
+  for (let gridY = 0; gridY < c.height; gridY += gridSize) {
+    x.beginPath(); x.moveTo(0, gridY); x.lineTo(c.width, gridY); x.stroke();
+  }
 
   // PAUSE MENU
   if (paused) {
@@ -608,27 +785,46 @@ function draw() {
   }
 
   // Player
+  x.save();
+  x.shadowColor = p.col;
+  x.shadowBlur = 30;
   x.beginPath();
   x.arc(p.x,p.y,p.r,0,Math.PI*2);
-  x.fillStyle=p.col;
+  const playerGlow = x.createRadialGradient(p.x - 5, p.y - 6, 1, p.x, p.y, p.r);
+  playerGlow.addColorStop(0, "#ffffff");
+  playerGlow.addColorStop(.3, p.col);
+  playerGlow.addColorStop(1, "#187d8c");
+  x.fillStyle=playerGlow;
   x.fill();
+  x.shadowBlur = 0;
+  x.strokeStyle = "rgba(225,255,247,.9)";
+  x.lineWidth = 2;
+  x.stroke();
+  x.restore();
 
   // Player HP bar
-  x.fillStyle="red";
-  x.fillRect(p.x-20,p.y-p.r-20,40,6);
-  x.fillStyle="#00FF00";
-  x.fillRect(p.x-20,p.y-p.r-20,(p.hp/p.maxHp)*40,6);
+  x.fillStyle="rgba(3,10,16,.8)";
+  x.fillRect(p.x-24,p.y-p.r-20,48,7);
+  x.fillStyle="#ff647e";
+  x.fillRect(p.x-22,p.y-p.r-18,44*Math.max(0,p.hp/p.maxHp),3);
 
   // Player Mana bar
-  x.fillStyle="blue";
-  x.fillRect(p.x-20,p.y+p.r+10,40,6);
-  x.fillStyle="cyan";
-  x.fillRect(p.x-20,p.y+p.r+10,(p.mana/p.maxMana)*40,6);
+  x.fillStyle="rgba(3,10,16,.8)";
+  x.fillRect(p.x-24,p.y+p.r+10,48,7);
+  x.fillStyle="#59e5ed";
+  x.fillRect(p.x-22,p.y+p.r+12,44*Math.max(0,p.mana/p.maxMana),3);
 
   // XP
-  x.fillStyle="white";
-  x.font="16px Arial";
-  x.fillText(`Lvl ${p.lvl}  XP ${p.xp}/${p.xpNext}`,10,20);
+  x.fillStyle="rgba(5,14,23,.76)";
+  x.fillRect(16,16,210,38);
+  x.strokeStyle="rgba(125,233,189,.45)";
+  x.strokeRect(16,16,210,38);
+  x.fillStyle="#c9f6e4";
+  x.font="600 14px Arial";
+  x.fillText(`LEVEL ${p.lvl}`,28,40);
+  x.fillStyle="#81a89f";
+  x.font="12px Arial";
+  x.fillText(`XP ${p.xp} / ${p.xpNext}`,105,40);
 
   // Summons + shots
   sums.forEach(drawSummon);
@@ -644,25 +840,38 @@ function draw() {
 
   // Boss
   if (boss) {
+    x.save();
+    x.shadowColor=boss.col;
+    x.shadowBlur=34;
     x.beginPath();
     x.arc(boss.x,boss.y,boss.r,0,Math.PI*2);
-    x.fillStyle=boss.col;
+    const bossGlow=x.createRadialGradient(boss.x-boss.r*.3,boss.y-boss.r*.35,2,boss.x,boss.y,boss.r);
+    bossGlow.addColorStop(0,"#fff2d1");
+    bossGlow.addColorStop(.18,boss.col);
+    bossGlow.addColorStop(1,"#2a101e");
+    x.fillStyle=bossGlow;
     x.fill();
+    x.shadowBlur=0;
+    x.strokeStyle="rgba(255,224,178,.9)";
+    x.lineWidth=3;
+    x.stroke();
+    x.restore();
 
-    x.fillStyle="white";
-    x.fillRect(boss.x-40,boss.y-boss.r-20,80,10);
-
-    x.fillStyle="#00FF00";
+    x.fillStyle="rgba(5,9,16,.86)";
+    x.fillRect(boss.x-44,boss.y-boss.r-22,88,12);
+    x.fillStyle="#fb667d";
     const bossHpWidth = Math.max(0,(boss.hp/boss.maxHp)*80);
-    x.fillRect(boss.x-40,boss.y-boss.r-20,bossHpWidth,10);
+    x.fillRect(boss.x-40,boss.y-boss.r-19,bossHpWidth,6);
 
-    x.fillStyle="yellow";
-    x.font="20px Arial";
+    x.fillStyle="#ffe39a";
+    x.font="700 13px Arial";
+    x.textAlign="center";
 
-    if (boss.type === "god") x.fillText("GOD", boss.x - 20, boss.y - boss.r - 40);
-    else if (boss.type === "dragon") x.fillText("DRAGON", boss.x - 35, boss.y - boss.r - 40);
-    else if (boss.type === "elite") x.fillText("ELITE", boss.x - 25, boss.y - boss.r - 40);
-    else x.fillText("BOSS", boss.x - 20, boss.y - boss.r - 40);
+    if (boss.type === "god") x.fillText("GOD", boss.x, boss.y - boss.r - 32);
+    else if (boss.type === "dragon") x.fillText("DRAGON", boss.x, boss.y - boss.r - 32);
+    else if (boss.type === "elite") x.fillText("ELITE", boss.x, boss.y - boss.r - 32);
+    else x.fillText("BOSS", boss.x, boss.y - boss.r - 32);
+    x.textAlign="left";
   }
 
   // Boss drop text
@@ -717,7 +926,7 @@ function draw() {
 
 // GAME LOOP
 function gameLoop() {
-  update();
+  if (controlsChosen) update();
   draw();
   requestAnimationFrame(gameLoop);
 }

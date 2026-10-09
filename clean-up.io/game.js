@@ -25,6 +25,14 @@ const blackHole = {
 
 let shapes = [];
 let draggingShape = null;
+let dragOffsetX = 0;
+let dragOffsetY = 0;
+const ambientStars = Array.from({ length: 90 }, () => ({
+    x: Math.random() * canvas.width,
+    y: Math.random() * canvas.height,
+    radius: 0.5 + Math.random() * 1.6,
+    phase: Math.random() * Math.PI * 2
+}));
 
 // ---------------------- SHAPE TYPES WITH RARITY ----------------------
 const SHAPE_TYPES = [
@@ -78,7 +86,8 @@ function spawnShape() {
         color: `hsl(${Math.random() * 360}, 80%, 60%)`,
         type: shapeType.type,
         points: shapeType.points + mutation.bonus,
-        mutation
+        mutation,
+        born: performance.now()
     });
 
     if (mutation.name === "supernova") {
@@ -91,71 +100,112 @@ setInterval(spawnShape, 4000);
 
 // ---------------------- DRAW SHAPES ----------------------
 function drawShape(s) {
-    ctx.fillStyle = s.color;
-
+    const pulse = (Math.sin(performance.now() / 420 + s.x * .013) + 1) / 2;
+    const centerX = s.x + s.size / 2;
+    const centerY = s.y + s.size / 2;
+    const inset = s.size * .1;
+    const vertices = s.type === "triangle"
+        ? [[centerX, s.y + inset], [s.x + s.size - inset, s.y + s.size - inset], [s.x + inset, s.y + s.size - inset]]
+        : s.type === "diamond"
+            ? [[centerX, s.y + inset], [s.x + s.size - inset, centerY], [centerX, s.y + s.size - inset], [s.x + inset, centerY]]
+            : null;
+    const gradient = ctx.createLinearGradient(s.x, s.y, s.x + s.size, s.y + s.size);
+    gradient.addColorStop(0, "#ffffff");
+    gradient.addColorStop(.22, s.color);
+    gradient.addColorStop(1, "#10252b");
+    ctx.save();
+    ctx.shadowColor = s.mutation.name === "none" ? s.color : s.mutation.colorEffect;
+    ctx.shadowBlur = s === draggingShape ? 30 : 12 + pulse * 8;
+    ctx.fillStyle = gradient;
+    ctx.strokeStyle = "rgba(232,255,247,.82)";
+    ctx.lineWidth = 2;
     if (s.type === "square") {
-        ctx.fillRect(s.x, s.y, s.size, s.size);
+        const corner = s.size * .16;
+        ctx.beginPath();
+        ctx.roundRect(s.x + inset, s.y + inset, s.size - inset * 2, s.size - inset * 2, corner);
+        ctx.fill();
+        ctx.stroke();
     }
 
     if (s.type === "circle") {
         ctx.beginPath();
-        ctx.arc(s.x + s.size/2, s.y + s.size/2, s.size/2, 0, Math.PI * 2);
+        ctx.arc(centerX, centerY, s.size * .42, 0, Math.PI * 2);
         ctx.fill();
+        ctx.stroke();
     }
 
-    if (s.type === "triangle") {
+    if (vertices) {
         ctx.beginPath();
-        ctx.moveTo(s.x + s.size/2, s.y);
-        ctx.lineTo(s.x, s.y + s.size);
-        ctx.lineTo(s.x + s.size, s.y + s.size);
+        ctx.moveTo(vertices[0][0], vertices[0][1]);
+        vertices.slice(1).forEach(([x, y]) => ctx.lineTo(x, y));
         ctx.closePath();
         ctx.fill();
+        ctx.stroke();
     }
-
-    if (s.type === "diamond") {
-        ctx.beginPath();
-        ctx.moveTo(s.x + s.size/2, s.y);
-        ctx.lineTo(s.x, s.y + s.size/2);
-        ctx.lineTo(s.x + s.size/2, s.y + s.size);
-        ctx.lineTo(s.x + s.size, s.y + s.size/2);
-        ctx.closePath();
-        ctx.fill();
-    }
+    ctx.shadowBlur = 0;
+    ctx.beginPath();
+    ctx.arc(s.x + s.size * .31, s.y + s.size * .27, Math.max(2, s.size * .07), 0, Math.PI * 2);
+    ctx.fillStyle = "rgba(255,255,255,.8)";
+    ctx.fill();
 
     // Mutation glow
     if (s.mutation.name !== "none") {
         ctx.strokeStyle = s.mutation.colorEffect;
-        ctx.lineWidth = 3;
-        ctx.strokeRect(s.x - 2, s.y - 2, s.size + 4, s.size + 4);
+        ctx.lineWidth = 2 + pulse;
+        ctx.setLineDash([5, 4]);
+        ctx.strokeRect(s.x - 4, s.y - 4, s.size + 8, s.size + 8);
+        ctx.setLineDash([]);
     }
+    if (s === draggingShape) {
+        ctx.strokeStyle = "rgba(255,255,255,.9)";
+        ctx.lineWidth = 2;
+        ctx.setLineDash([3, 4]);
+        ctx.strokeRect(s.x - 7, s.y - 7, s.size + 14, s.size + 14);
+    }
+    ctx.restore();
 }
 
 // ---------------------- INPUT ----------------------
-canvas.addEventListener("mousedown", (e) => {
-    const mx = e.clientX;
-    const my = e.clientY;
+function getCanvasPoint(event) {
+    const bounds = canvas.getBoundingClientRect();
+    return {
+        x: (event.clientX - bounds.left) * canvas.width / bounds.width,
+        y: (event.clientY - bounds.top) * canvas.height / bounds.height
+    };
+}
 
-    for (let s of shapes) {
-        if (
-            mx > s.x && mx < s.x + s.size &&
-            my > s.y && my < s.y + s.size
-        ) {
-            draggingShape = s;
+canvas.addEventListener("pointerdown", event => {
+    const point = getCanvasPoint(event);
+    for (let index = shapes.length - 1; index >= 0; index--) {
+        const shape = shapes[index];
+        if (point.x >= shape.x && point.x <= shape.x + shape.size &&
+            point.y >= shape.y && point.y <= shape.y + shape.size) {
+            draggingShape = shape;
+            dragOffsetX = point.x - shape.x;
+            dragOffsetY = point.y - shape.y;
+            canvas.setPointerCapture(event.pointerId);
+            canvas.style.cursor = "grabbing";
+            event.preventDefault();
             break;
         }
     }
 });
 
-canvas.addEventListener("mousemove", (e) => {
-    if (draggingShape) {
-        draggingShape.x = e.clientX - draggingShape.size / 2;
-        draggingShape.y = e.clientY - draggingShape.size / 2;
-    }
+canvas.addEventListener("pointermove", event => {
+    if (!draggingShape) return;
+    const point = getCanvasPoint(event);
+    draggingShape.x = Math.max(0, Math.min(canvas.width - draggingShape.size, point.x - dragOffsetX));
+    draggingShape.y = Math.max(0, Math.min(canvas.height - draggingShape.size, point.y - dragOffsetY));
+    event.preventDefault();
 });
 
-canvas.addEventListener("mouseup", () => {
+function stopDragging() {
     draggingShape = null;
-});
+    canvas.style.cursor = "default";
+}
+canvas.addEventListener("pointerup", stopDragging);
+canvas.addEventListener("pointercancel", stopDragging);
+canvas.addEventListener("lostpointercapture", stopDragging);
 
 // ---------------------- UPDATE ----------------------
 function update() {
@@ -193,16 +243,67 @@ function update() {
 // ---------------------- DRAW ----------------------
 function draw() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
+    const now = performance.now();
+    const background = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+    background.addColorStop(0, "#071819");
+    background.addColorStop(.55, "#0b2325");
+    background.addColorStop(1, "#101827");
+    ctx.fillStyle = background;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.strokeStyle = "rgba(107,218,185,.055)";
+    ctx.lineWidth = 1;
+    const grid = 48;
+    for (let gx = 0; gx < canvas.width; gx += grid) {
+        ctx.beginPath(); ctx.moveTo(gx, 0); ctx.lineTo(gx, canvas.height); ctx.stroke();
+    }
+    for (let gy = 0; gy < canvas.height; gy += grid) {
+        ctx.beginPath(); ctx.moveTo(0, gy); ctx.lineTo(canvas.width, gy); ctx.stroke();
+    }
+    ambientStars.forEach(star => {
+        const alpha = .22 + (Math.sin(now / 700 + star.phase) + 1) * .2;
+        ctx.fillStyle = `rgba(202,255,230,${alpha})`;
+        ctx.beginPath(); ctx.arc(star.x, star.y, star.radius, 0, Math.PI * 2); ctx.fill();
+    });
 
     // Black hole
+    const pulse = (Math.sin(now / 850) + 1) / 2;
+    const aura = ctx.createRadialGradient(blackHole.x, blackHole.y, blackHole.radius * .4, blackHole.x, blackHole.y, blackHole.radius * 2.1);
+    aura.addColorStop(0, "rgba(0,0,0,0)");
+    aura.addColorStop(.52, `rgba(54,238,198,${.08 + pulse * .08})`);
+    aura.addColorStop(.75, "rgba(135,82,255,.13)");
+    aura.addColorStop(1, "rgba(0,0,0,0)");
+    ctx.fillStyle = aura;
+    ctx.fillRect(blackHole.x - blackHole.radius * 2.2, blackHole.y - blackHole.radius * 2.2, blackHole.radius * 4.4, blackHole.radius * 4.4);
+
+    ctx.save();
+    ctx.translate(blackHole.x, blackHole.y);
+    ctx.rotate(now * .00016);
+    for (let ring = 0; ring < 3; ring++) {
+        ctx.beginPath();
+        ctx.ellipse(0, 0, blackHole.radius * (1.22 + ring * .16), blackHole.radius * (.31 + ring * .035), ring * .13, .12, Math.PI * 1.75);
+        ctx.strokeStyle = `rgba(${ring === 1 ? "161,113,255" : "83,245,207"},${.56 - ring * .12})`;
+        ctx.lineWidth = ring === 0 ? 4 : 2;
+        ctx.shadowColor = ring === 1 ? "#a777ff" : "#51f5cb";
+        ctx.shadowBlur = 16 - ring * 3;
+        ctx.stroke();
+    }
+    ctx.restore();
+    ctx.save();
+    ctx.shadowColor = "#6c56ff";
+    ctx.shadowBlur = 36;
     ctx.beginPath();
     ctx.arc(blackHole.x, blackHole.y, blackHole.radius, 0, Math.PI * 2);
-    ctx.fillStyle = "black";
+    const hole = ctx.createRadialGradient(blackHole.x - blackHole.radius * .28, blackHole.y - blackHole.radius * .35, 1, blackHole.x, blackHole.y, blackHole.radius);
+    hole.addColorStop(0, "#243047");
+    hole.addColorStop(.35, "#090d19");
+    hole.addColorStop(1, "#020409");
+    ctx.fillStyle = hole;
     ctx.fill();
-
-    ctx.strokeStyle = "purple";
-    ctx.lineWidth = 4;
+    ctx.shadowBlur = 0;
+    ctx.strokeStyle = `rgba(160,131,255,${.7 + pulse * .25})`;
+    ctx.lineWidth = 3;
     ctx.stroke();
+    ctx.restore();
 
     for (let s of shapes) drawShape(s);
 }

@@ -1,14 +1,54 @@
 <!DOCTYPE html>
 <html>
 <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Shape Summoner LEGACY</title>
   <style>
     body { margin: 0; overflow: hidden; background: #111; }
-    canvas { display: block; }
+    canvas { display: block; touch-action: none; }
+    .controls-modal { position:fixed; inset:0; z-index:10; display:grid; place-items:center; padding:20px; background:rgba(0,0,0,.88); color:#fff; font:16px Arial,sans-serif; }
+    .controls-dialog { width:min(460px,100%); padding:28px; border:2px solid #75e6a5; border-radius:14px; background:#18211d; text-align:center; }
+    .controls-dialog h1 { margin:0 0 10px; font-size:clamp(24px,6vw,38px); }
+    .controls-dialog p { margin:0 0 22px; color:#ccd5cf; }
+    .control-options { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+    .control-options button { min-height:90px; border:1px solid #75e6a5; border-radius:9px; background:#202e27; color:white; cursor:pointer; }
+    .control-options strong,.control-options span { display:block; }
+    .control-options strong { margin-bottom:7px; color:#75e6a5; }
+    .control-options span { font-size:12px; }
+    .mobile-controls { display:none; }
+    body.mobile-mode .mobile-controls { display:flex; }
+    .mobile-controls { position:fixed; inset:0; z-index:5; justify-content:space-between; align-items:flex-end; padding:16px; pointer-events:none; font:11px Arial,sans-serif; }
+    .virtual-stick { position:relative; width:112px; height:112px; margin:0 0 4px 4px; border:2px solid #75e6a5aa; border-radius:50%; background:#75e6a522; pointer-events:auto; touch-action:none; }
+    .virtual-stick-knob { position:absolute; top:50%; left:50%; width:48px; height:48px; border:2px solid #75e6a5; border-radius:50%; background:#75e6a555; transform:translate(-50%,-50%); pointer-events:none; }
+    .mobile-action-pad { display:grid; grid-template-columns:repeat(2,64px); gap:7px; pointer-events:auto; }
+    .mobile-action-pad button { min-height:48px; padding:4px; border:1px solid #75e6a5; border-radius:9px; background:#18211ddd; color:#fff; font-size:11px; touch-action:none; }
+    .mobile-action-pad .selected { background:#75e6a5; color:#111; }
+    @media(max-width:520px) { .controls-dialog { padding:24px 18px; } .mobile-controls { padding:10px; } .virtual-stick { width:96px;height:96px; } .virtual-stick-knob { width:42px;height:42px; } .mobile-action-pad { grid-template-columns:repeat(2,56px); gap:5px; } .mobile-action-pad button { min-height:42px;font-size:10px; } }
   </style>
 </head>
 <body>
 <canvas id="game"></canvas>
+<div id="controlsModal" class="controls-modal">
+  <div class="controls-dialog" role="dialog" aria-modal="true" aria-labelledby="controlsTitle">
+    <h1 id="controlsTitle">Choose your controls</h1>
+    <p>Pick how you want to play Shape Summoner Legacy.</p>
+    <div class="control-options">
+      <button type="button" data-control-mode="mobile"><strong>Mobile</strong><span>Joystick + action buttons</span></button>
+      <button type="button" data-control-mode="computer"><strong>Computer</strong><span>WASD + keyboard and mouse</span></button>
+    </div>
+  </div>
+</div>
+<div id="mobileControls" class="mobile-controls" aria-label="Mobile game controls">
+  <div id="moveStick" class="virtual-stick" aria-label="Movement joystick"><div class="virtual-stick-knob"></div></div>
+  <div class="mobile-action-pad">
+    <button type="button" data-shape="1" class="selected">CIRCLE</button>
+    <button type="button" data-shape="2">SQUARE</button>
+    <button type="button" data-shape="3">TRIANGLE</button>
+    <button type="button" data-shape="4">STAR</button>
+    <button type="button" id="mobileFire">FIRE</button>
+    <button type="button" id="mobileSummon">SUMMON</button>
+  </div>
+</div>
 
 <script>
 const canvas = document.getElementById("game");
@@ -47,6 +87,8 @@ let gameOver = false;
 
 // Current shape type
 let currentShape = 1;
+let controlsChosen = false;
+let controlMode = null;
 
 // Track mouse for aiming
 let lastMouseX = player.x;
@@ -70,12 +112,67 @@ function spawnBoss() {
 }
 
 setInterval(() => {
-  if (!boss && !gameOver) spawnBoss();
+  if (controlsChosen && !boss && !gameOver) spawnBoss();
 }, Math.random() * 5000 + 5000);
+
+document.querySelectorAll("[data-control-mode]").forEach(button => {
+  button.addEventListener("click", () => {
+    controlMode = button.dataset.controlMode;
+    controlsChosen = true;
+    document.getElementById("controlsModal").remove();
+    document.body.classList.toggle("mobile-mode", controlMode === "mobile");
+    if (controlMode === "mobile") lastMouseX = player.x + 100;
+  });
+});
+
+const moveStick = document.getElementById("moveStick");
+const moveKnob = moveStick.querySelector(".virtual-stick-knob");
+let stickPointer = null;
+function moveJoystick(event) {
+  const bounds = moveStick.getBoundingClientRect();
+  const limit = bounds.width * .34;
+  const dx = event.clientX - (bounds.left + bounds.width / 2);
+  const dy = event.clientY - (bounds.top + bounds.height / 2);
+  const length = Math.hypot(dx, dy), scale = length > limit ? limit / length : 1;
+  const x = dx * scale, y = dy * scale;
+  moveKnob.style.transform = `translate(calc(-50% + ${x}px),calc(-50% + ${y}px))`;
+  keys.d = x > 10; keys.a = x < -10; keys.s = y > 10; keys.w = y < -10;
+  if (Math.hypot(x, y) > 10) {
+    const angle = Math.atan2(y, x);
+    lastMouseX = player.x + Math.cos(angle) * 100;
+    lastMouseY = player.y + Math.sin(angle) * 100;
+  }
+}
+function resetJoystick() {
+  stickPointer = null;
+  moveKnob.style.transform = "translate(-50%,-50%)";
+  keys.w = keys.a = keys.s = keys.d = false;
+}
+moveStick.addEventListener("pointerdown", event => {
+  event.preventDefault(); stickPointer = event.pointerId;
+  moveStick.setPointerCapture(stickPointer); moveJoystick(event);
+});
+moveStick.addEventListener("pointermove", event => { if (event.pointerId === stickPointer) moveJoystick(event); });
+moveStick.addEventListener("pointerup", resetJoystick);
+moveStick.addEventListener("pointercancel", resetJoystick);
+document.querySelectorAll("[data-shape]").forEach(button => button.addEventListener("click", event => {
+  event.stopPropagation(); currentShape = Number(button.dataset.shape);
+  document.querySelectorAll("[data-shape]").forEach(option => option.classList.toggle("selected", option === button));
+}));
+document.getElementById("mobileFire").addEventListener("pointerdown", event => {
+  event.preventDefault();
+  event.stopPropagation();
+  if (boss) {
+    lastMouseX = boss.x;
+    lastMouseY = boss.y;
+  }
+  shootShape();
+});
 
 // Movement keys
 const keys = {};
 window.addEventListener("keydown", (e) => {
+  if (!controlsChosen) return;
   keys[e.key] = true;
 
   if (e.key === "1") currentShape = 1;
@@ -87,24 +184,35 @@ window.addEventListener("keydown", (e) => {
 });
 window.addEventListener("keyup", (e) => keys[e.key] = false);
 
+function summonAt(x, y) {
+  if (gameOver) return;
+  const summon = {
+    x, y, radius: 20, color: `hsl(${Math.random()*360},80%,60%)`,
+    shape: currentShape, hp: 10
+  };
+  summons.push(summon);
+  fuseSummons();
+}
+
+function summonInFront() {
+  const angle = Math.atan2(lastMouseY - player.y, lastMouseX - player.x);
+  summonAt(
+    Math.max(20, Math.min(canvas.width - 20, player.x + Math.cos(angle) * 110)),
+    Math.max(20, Math.min(canvas.height - 20, player.y + Math.sin(angle) * 110))
+  );
+}
+document.getElementById("mobileSummon").addEventListener("pointerdown", event => {
+  event.preventDefault(); event.stopPropagation(); summonInFront();
+});
+
 // Summon shapes by clicking
 canvas.addEventListener("click", (e) => {
+  if (!controlsChosen) return;
   if (gameOver) {
     respawnPlayer();
     return;
   }
-
-  const summon = {
-    x: e.clientX,
-    y: e.clientY,
-    radius: 20,
-    color: `hsl(${Math.random()*360},80%,60%)`,
-    shape: currentShape,
-    hp: 10
-  };
-
-  summons.push(summon);
-  fuseSummons();
+  summonAt(e.clientX, e.clientY);
 });
 
 // Shooting
@@ -330,7 +438,7 @@ function draw() {
 }
 
 function gameLoop() {
-  update();
+  if (controlsChosen) update();
   draw();
 }
 

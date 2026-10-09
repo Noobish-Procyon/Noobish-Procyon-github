@@ -10,7 +10,7 @@
     * { box-sizing:border-box; }
     html, body { margin:0; width:100%; height:100%; overflow:hidden; background:#081115; color:var(--ink); font-family:'Space Grotesk', sans-serif; }
     body { cursor:crosshair; }
-    canvas { display:block; width:100vw; height:100vh; }
+    canvas { display:block; width:100vw; height:100vh; touch-action:none; }
     .hud { position:fixed; inset:0; pointer-events:none; padding:24px 28px; display:flex; flex-direction:column; justify-content:space-between; }
     .topbar { display:flex; align-items:flex-start; justify-content:space-between; }
     .brand { letter-spacing:.15em; font-size:12px; font-weight:700; color:var(--lime); text-transform:uppercase; }
@@ -28,7 +28,7 @@
     #hp-fill { background:var(--coral); } #energy-fill { background:var(--cyan); }
     .help { text-align:right; color:var(--muted); font:11px 'DM Mono', monospace; line-height:1.7; }
     kbd { color:var(--ink); border:1px solid var(--line); padding:2px 5px; background:rgba(255,255,255,.05); }
-    .screen { position:fixed; inset:0; display:grid; place-items:center; background:radial-gradient(ellipse at 50% 50%, rgba(20,48,48,.25), rgba(4,10,12,.86) 70%); transition:opacity .35s ease; }
+    .screen { position:fixed; z-index:10; inset:0; display:grid; place-items:center; background:radial-gradient(ellipse at 50% 50%, rgba(20,48,48,.25), rgba(4,10,12,.86) 70%); transition:opacity .35s ease; }
     .screen.hidden { opacity:0; pointer-events:none; }
     .panel { width:min(590px, calc(100vw - 40px)); border:1px solid rgba(214,255,88,.38); background:var(--panel); padding:40px 44px; box-shadow:0 20px 90px rgba(0,0,0,.4); }
     .eyebrow { color:var(--lime); font:11px 'DM Mono', monospace; letter-spacing:.18em; text-transform:uppercase; }
@@ -45,8 +45,23 @@
     .choices button:hover { border-color:var(--lime); background:rgba(214,255,88,.1); }
     .choices b { display:block; color:var(--lime); margin-bottom:9px; font:500 13px 'DM Mono', monospace; }
     .choices span { display:block; color:#aab9b2; font:11px 'DM Mono', monospace; line-height:1.45; }
+    .control-options { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin:20px 0; }
+    .control-options button { min-height:88px; padding:14px; color:var(--ink); background:rgba(255,255,255,.07); border:1px solid var(--line); text-align:left; }
+    .control-options button:hover { border-color:var(--lime); background:rgba(214,255,88,.1); }
+    .control-options b,.control-options span { display:block; }
+    .control-options b { margin-bottom:8px; color:var(--lime); font:500 13px 'DM Mono',monospace; }
+    .control-options span { color:#aab9b2; font:11px 'DM Mono',monospace; line-height:1.45; }
+    .mobile-controls { display:none; pointer-events:none; }
+    body.mobile-mode.game-started .mobile-controls { display:block; }
+    .virtual-stick { position:fixed; z-index:5; left:20px; bottom:20px; width:118px; height:118px; border:2px solid rgba(113,232,220,.7); border-radius:50%; background:rgba(113,232,220,.12); touch-action:none; pointer-events:auto; }
+    .virtual-stick-knob { position:absolute; top:50%; left:50%; width:50px; height:50px; border:2px solid var(--cyan); border-radius:50%; background:rgba(113,232,220,.35); transform:translate(-50%,-50%); pointer-events:none; }
+    .mobile-actions { position:fixed; z-index:5; right:18px; bottom:20px; display:grid; gap:8px; pointer-events:auto; }
+    .mobile-actions button { min-width:88px; min-height:52px; border:1px solid var(--cyan); border-radius:10px; background:rgba(13,22,27,.88); color:var(--ink); font:700 11px 'DM Mono',monospace; touch-action:none; }
+    .mobile-actions button:active { background:rgba(113,232,220,.25); }
+    body.mobile-mode .help { display:none; }
+    @media(max-width:600px) { .control-options { grid-template-columns:1fr; margin:14px 0; } .control-options button { min-height:65px; } .virtual-stick { left:10px; bottom:12px; width:98px; height:98px; } .virtual-stick-knob { width:42px;height:42px; } .mobile-actions { right:10px; bottom:12px; } .mobile-actions button { min-width:74px; min-height:46px; font-size:10px; } }
     #message { margin-top:13px; color:var(--muted); font:11px 'DM Mono', monospace; }
-    #continue-btn { display:none; margin-left:8px; color:var(--ink); background:rgba(255,255,255,.1); border:1px solid var(--line); }
+    #continue-btn { margin-left:8px; color:var(--ink); background:rgba(255,255,255,.1); border:1px solid var(--line); }
     #continue-btn:hover { background:rgba(113,232,220,.15); border-color:var(--cyan); }
     @media (max-width:600px) { .hud{padding:17px 16px 18px} .stats{gap:5px} .stat{min-width:70px;padding:7px 8px}.stat strong{font-size:15px}.brand{font-size:10px}.meters{width:100%;gap:13px}.bottom{gap:12px;flex-direction:column;align-items:stretch}.help{text-align:left}.panel{padding:28px 25px}.choices{grid-template-columns:1fr}.choices button{min-height:auto} }
   </style>
@@ -57,14 +72,19 @@
     <div class="topbar"><div class="brand">ORBITFALL <span>// SECTOR 07</span></div><div class="stats"><div class="stat"><label>Wave</label><strong id="wave">01</strong></div><div class="stat"><label>Score</label><strong id="score">00000</strong></div><div class="stat"><label>Threats</label><strong id="threats">00</strong></div></div></div>
     <div class="bottom"><div class="meters"><div class="meter"><div class="meter-head"><label>Integrity</label><span id="hp-text">100 / 100</span></div><div class="track"><div class="fill" id="hp-fill" style="width:100%"></div></div></div><div class="meter"><div class="meter-head"><label>Barrier charge</label><span id="energy-text">100 / 100</span></div><div class="track"><div class="fill" id="energy-fill" style="width:100%"></div></div></div></div><div class="help"><kbd>WASD</kbd> move &nbsp; <kbd>SPACE</kbd> fire &nbsp; <kbd>CLICK</kbd> summon barrier</div></div>
   </div>
-  <div class="screen" id="start-screen"><div class="panel"><div class="eyebrow">A small arena survival // v.1.0</div><h1>Hold the <em>line.</em></h1><p class="intro">You are the last stable orbit. Survive escalating waves, collect shards, and shape the battlefield before it shapes you.</p><div class="rules"><div class="rule"><b>01 / FIRE</b><br>Face the cursor and hold space to fire.</div><div class="rule"><b>02 / DEFEND</b><br>Click anywhere to summon a temporary wall.</div></div><button id="start-btn">Enter the orbit</button><button id="continue-btn">Continue saved run</button><div id="message">Best played with sound off and a little room to breathe.</div></div></div>
+  <div class="screen" id="start-screen"><div class="panel"><div class="eyebrow">A small arena survival // v.1.0</div><h1>Hold the <em>line.</em></h1><p class="intro">You are the last stable orbit. Survive escalating waves, collect shards, and shape the battlefield before it shapes you.</p><p class="intro">Choose your controls to continue:</p><div class="control-options"><button type="button" data-control-mode="mobile"><b>MOBILE</b><span>Joystick + on-screen action buttons</span></button><button type="button" data-control-mode="computer"><b>COMPUTER</b><span>WASD / arrows + mouse and keyboard</span></button></div><div class="rules"><div class="rule" id="fire-rule"><b>01 / FIRE</b><br>Face the cursor and hold space to fire.</div><div class="rule" id="defend-rule"><b>02 / DEFEND</b><br>Click anywhere to summon a temporary wall.</div></div><button id="start-btn" hidden>Enter the orbit</button><button id="continue-btn" hidden>Continue saved run</button><div id="message">Best played with sound off and a little room to breathe.</div></div></div>
   <div class="screen hidden" id="upgrade-screen"><div class="panel"><div class="eyebrow">Wave cleared // choose one mutation</div><h1 id="upgrade-title">A new edge.</h1><p class="intro">The arena is quiet for a moment. Spend it well.</p><div class="choices" id="choices"></div></div></div>
   <div class="screen hidden" id="gameover-screen"><div class="panel"><div class="eyebrow">Signal lost // run complete</div><h1>Orbit <em>collapsed.</em></h1><p class="intro" id="final-score">You held the line.</p><button id="restart-btn">Re-enter the orbit</button></div></div>
+  <div class="mobile-controls" id="mobileControls" aria-label="Mobile game controls">
+    <div class="virtual-stick" id="moveStick" aria-label="Movement joystick"><div class="virtual-stick-knob"></div></div>
+    <div class="mobile-actions"><button type="button" id="mobileFire">FIRE</button><button type="button" id="mobileBarrier">BARRIER</button></div>
+  </div>
   <script>
     const canvas = document.getElementById('game'), ctx = canvas.getContext('2d');
     const SAVE_KEY = 'orbitfall-run-v1';
-    let W, H, dpr, last = 0, running = false, paused = false, wave = 1, score = 0, spawnLeft = 0, spawnTimer = 0, nextWave = false, saveTimer = 0;
+    let W, H, dpr, last = 0, running = false, paused = false, wave = 1, score = 0, spawnLeft = 0, spawnTimer = 0, nextWave = false, saveTimer = 0, controlsChosen = false, controlMode = null;
     const keys = {}, mouse = { x: innerWidth / 2, y: innerHeight / 2, down: false };
+    const stickVector = { x: 0, y: 0 };
     let player, bullets = [], enemies = [], barriers = [], shards = [], particles = [];
     const upgrades = [
       ['HOT CORE','Shots deal 45% more damage.'], ['SWIFT ORBIT','Movement speed increased by 30%.'], ['DEEP RESERVE','Barrier capacity increased by 35.'], ['RAPID PULSE','Fire rate increased by 25%.'], ['REPAIR PROTOCOL','Restore 28 integrity now.'], ['MAGNETIC FIELD','Shards drift toward you from farther away.']
@@ -72,7 +92,7 @@
     function resize(){ dpr=Math.min(devicePixelRatio||1,2); W=innerWidth; H=innerHeight; canvas.width=W*dpr; canvas.height=H*dpr; ctx.setTransform(dpr,0,0,dpr,0,0); }
     function reset(){ wave=1; score=0; bullets=[]; enemies=[]; barriers=[]; shards=[]; particles=[]; spawnLeft=8; spawnTimer=0; nextWave=false; saveTimer=0; player={x:W/2,y:H/2,r:15,hp:100,maxHp:100,energy:100,maxEnergy:100,speed:260,damage:24,fireRate:0.16,cool:0,magnet:100}; try{localStorage.removeItem(SAVE_KEY)}catch(error){} }
     function start(){ reset(); beginRun(); }
-    function beginRun(){ running=true; paused=false; document.getElementById('start-screen').classList.add('hidden'); document.getElementById('gameover-screen').classList.add('hidden'); last=performance.now(); requestAnimationFrame(loop); }
+    function beginRun(){ running=true; paused=false; document.body.classList.add('game-started'); document.getElementById('start-screen').classList.add('hidden'); document.getElementById('gameover-screen').classList.add('hidden'); last=performance.now(); requestAnimationFrame(loop); }
     function saveRun(){ if(!running||!player)return; try{localStorage.setItem(SAVE_KEY,JSON.stringify({version:1,wave,score,spawnLeft,spawnTimer,nextWave,player,bullets,enemies,barriers,shards,savedAt:Date.now()}));}catch(error){} }
     function loadRun(){ try{const saved=JSON.parse(localStorage.getItem(SAVE_KEY));if(!saved||saved.version!==1||!saved.player)return false;wave=saved.wave;score=saved.score;spawnLeft=saved.spawnLeft;spawnTimer=saved.spawnTimer;nextWave=false;saveTimer=0;player=saved.player;bullets=saved.bullets||[];enemies=saved.enemies||[];barriers=saved.barriers||[];shards=saved.shards||[];particles=[];return true;}catch(error){return false;} }
     function continueRun(){ if(loadRun()){beginRun();} }
@@ -85,7 +105,7 @@
     function shoot(){ const angle=Math.atan2(mouse.y-player.y,mouse.x-player.x); bullets.push({x:player.x+Math.cos(angle)*18,y:player.y+Math.sin(angle)*18,vx:Math.cos(angle)*640,vy:Math.sin(angle)*640,r:4,damage:player.damage,life:1.2}); player.cool=player.fireRate; burst(player.x+Math.cos(angle)*18,player.y+Math.sin(angle)*18,'#d6ff58',2); }
     function addBarrier(x,y){ if(player.energy<24)return; const angle=Math.atan2(y-player.y,x-player.x); barriers.push({x,y,angle,r:54,life:5,max:5}); player.energy-=24; burst(x,y,'#71e8dc',14); }
     function update(dt){
-      const dx=(keys.s||keys.ArrowDown?1:0)-(keys.w||keys.ArrowUp?1:0), dy=(keys.d||keys.ArrowRight?1:0)-(keys.a||keys.ArrowLeft?1:0); const len=Math.hypot(dx,dy)||1;
+      const dx=(keys.s||keys.ArrowDown?1:0)-(keys.w||keys.ArrowUp?1:0)+stickVector.y, dy=(keys.d||keys.ArrowRight?1:0)-(keys.a||keys.ArrowLeft?1:0)+stickVector.x; const len=Math.hypot(dx,dy)||1;
       player.x=Math.max(25,Math.min(W-25,player.x+dy*player.speed*dt/len)); player.y=Math.max(25,Math.min(H-25,player.y+dx*player.speed*dt/len));
       player.energy=Math.min(player.maxEnergy,player.energy+10*dt); player.cool-=dt; if(keys[' ']&&player.cool<=0)shoot();
       saveTimer-=dt; if(saveTimer<=0){saveTimer=2;saveRun();} spawnTimer-=dt; if(spawnLeft>0&&spawnTimer<=0){ spawnLeft--; spawnTimer=Math.max(.22,.7-wave*.025); spawn(); } else if(spawnLeft===0&&enemies.length===0&&!nextWave){ nextWave=true; setTimeout(()=>{ if(running){ wave++; spawnLeft=6+wave*3; spawnTimer=0; nextWave=false; saveRun(); showUpgrade(); } },700); }
@@ -112,7 +132,21 @@
     }
     function hud(){document.getElementById('wave').textContent=String(wave).padStart(2,'0');document.getElementById('score').textContent=String(score).padStart(5,'0');document.getElementById('threats').textContent=String(enemies.length).padStart(2,'0');document.getElementById('hp-text').textContent=`${Math.ceil(player.hp)} / ${player.maxHp}`;document.getElementById('energy-text').textContent=`${Math.floor(player.energy)} / ${player.maxEnergy}`;document.getElementById('hp-fill').style.width=`${Math.max(0,player.hp/player.maxHp*100)}%`;document.getElementById('energy-fill').style.width=`${player.energy/player.maxEnergy*100}%`;}
     function loop(now){if(!running)return;const dt=Math.min((now-last)/1000,.033);last=now;if(!paused)update(dt);draw();requestAnimationFrame(loop)}
-    addEventListener('resize',resize); addEventListener('pagehide',saveRun); addEventListener('keydown',e=>{keys[e.key]=true;if([' ','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key))e.preventDefault();if(e.key==='p'&&running){paused=!paused;saveRun()}});addEventListener('keyup',e=>keys[e.key]=false);addEventListener('mousemove',e=>{mouse.x=e.clientX;mouse.y=e.clientY});canvas.addEventListener('click',e=>{if(running&&!paused)addBarrier(e.clientX,e.clientY)});document.getElementById('start-btn').onclick=start;document.getElementById('continue-btn').onclick=continueRun;document.getElementById('restart-btn').onclick=start;try{if(localStorage.getItem(SAVE_KEY)){document.getElementById('continue-btn').style.display='inline-block';}}catch(error){} resize();
+    const moveStick=document.getElementById('moveStick'), moveKnob=moveStick.querySelector('.virtual-stick-knob');
+    let stickPointer=null;
+    function moveJoystick(e){const r=moveStick.getBoundingClientRect(),limit=r.width*.34,dx=e.clientX-(r.left+r.width/2),dy=e.clientY-(r.top+r.height/2),len=Math.hypot(dx,dy),scale=len>limit?limit/len:1,x=dx*scale,y=dy*scale;moveKnob.style.transform=`translate(calc(-50% + ${x}px),calc(-50% + ${y}px))`;stickVector.x=x/limit;stickVector.y=y/limit;}
+    function releaseJoystick(){stickPointer=null;stickVector.x=0;stickVector.y=0;moveKnob.style.transform='translate(-50%,-50%)';}
+    moveStick.addEventListener('pointerdown',e=>{e.preventDefault();stickPointer=e.pointerId;moveStick.setPointerCapture(stickPointer);moveJoystick(e)});
+    moveStick.addEventListener('pointermove',e=>{if(e.pointerId===stickPointer)moveJoystick(e)});
+    moveStick.addEventListener('pointerup',releaseJoystick);moveStick.addEventListener('pointercancel',releaseJoystick);
+    document.querySelectorAll('[data-control-mode]').forEach(button=>button.addEventListener('click',()=>{controlMode=button.dataset.controlMode;controlsChosen=true;document.body.classList.toggle('mobile-mode',controlMode==='mobile');document.getElementById('start-btn').hidden=false;if(document.getElementById('continue-btn').dataset.hasSave==='true')document.getElementById('continue-btn').hidden=false;document.getElementById('fire-rule').innerHTML=controlMode==='mobile'?'<b>01 / FIRE</b><br>Tap FIRE to shoot toward the nearest threat.':'<b>01 / FIRE</b><br>Face the cursor and hold space to fire.';document.getElementById('defend-rule').innerHTML=controlMode==='mobile'?'<b>02 / DEFEND</b><br>Tap BARRIER to place a wall toward the nearest threat.':'<b>02 / DEFEND</b><br>Click anywhere to summon a temporary wall.';}));
+    function setMobileAim(){if(!player)return;const target=enemies.reduce((nearest,e)=>!nearest||Math.hypot(e.x-player.x,e.y-player.y)<Math.hypot(nearest.x-player.x,nearest.y-player.y)?e:nearest,null);mouse.x=target?target.x:player.x+100;mouse.y=target?target.y:player.y;}
+    const fireButton=document.getElementById('mobileFire');
+    fireButton.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();fireButton.setPointerCapture(e.pointerId);setMobileAim();keys[' ']=true});
+    const releaseFire=e=>{e.preventDefault();e.stopPropagation();keys[' ']=false;};
+    fireButton.addEventListener('pointerup',releaseFire);fireButton.addEventListener('pointercancel',releaseFire);
+    document.getElementById('mobileBarrier').addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();setMobileAim();if(player&&running&&!paused)addBarrier(mouse.x,mouse.y)});
+    addEventListener('resize',resize); addEventListener('pagehide',saveRun); addEventListener('keydown',e=>{if(!controlsChosen)return;keys[e.key]=true;if([' ','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key))e.preventDefault();if(e.key==='p'&&running){paused=!paused;saveRun()}}); addEventListener('keyup',e=>keys[e.key]=false); addEventListener('mousemove',e=>{mouse.x=e.clientX;mouse.y=e.clientY});canvas.addEventListener('click',e=>{if(running&&!paused)addBarrier(e.clientX,e.clientY)});document.getElementById('start-btn').onclick=start;document.getElementById('continue-btn').onclick=continueRun;document.getElementById('restart-btn').onclick=start;try{if(localStorage.getItem(SAVE_KEY)){const continueButton=document.getElementById('continue-btn');continueButton.dataset.hasSave='true';}}catch(error){} resize();
   </script>
 </body>
 </html>
