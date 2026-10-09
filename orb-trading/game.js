@@ -314,9 +314,74 @@ const moneyBoostPerGem = .0001;
 const mythicPityLimit = 40;
 const initialCoins = 5000;
 const saveKey = 'orbTradingSaveV1';
+const reducedMotionMedia = window.matchMedia('(prefers-reduced-motion: reduce)');
+const ambientMusic = {
+  context: null,
+  masterGain: null,
+  intervalId: null,
+  isPlaying: false,
+  turnOn() {
+    if (!('AudioContext' in window) || reducedMotionMedia.matches) return false;
+    if (!this.context) {
+      this.context = new AudioContext();
+      this.masterGain = this.context.createGain();
+      this.masterGain.gain.value = 0;
+      this.masterGain.connect(this.context.destination);
+    }
+    if (this.context.state === 'suspended') this.context.resume();
+    this.masterGain.gain.cancelScheduledValues(this.context.currentTime);
+    this.masterGain.gain.linearRampToValueAtTime(.05, this.context.currentTime + .8);
+    this.isPlaying = true;
+    this.scheduleNextNote();
+    return true;
+  },
+  turnOff() {
+    if (!this.context || !this.masterGain) return;
+    const { context, masterGain } = this;
+    const now = context.currentTime;
+    masterGain.gain.cancelScheduledValues(now);
+    masterGain.gain.linearRampToValueAtTime(0, now + .6);
+    clearInterval(this.intervalId);
+    this.intervalId = null;
+    this.isPlaying = false;
+    window.setTimeout(() => context.suspend(), 700);
+  },
+  scheduleNextNote() {
+    if (!this.context || !this.masterGain || !this.isPlaying) return;
+    clearInterval(this.intervalId);
+    const melody = [220, 277.18, 329.63, 277.18, 246.94, 196, 220, 293.66, 329.63, 293.66, 246.94, 196];
+    let noteIndex = 0;
+    this.intervalId = window.setInterval(() => {
+      if (!this.isPlaying) return;
+      const baseFrequency = melody[noteIndex % melody.length];
+      const chord = [baseFrequency, baseFrequency * 1.25, baseFrequency * 1.5];
+      const start = this.context.currentTime;
+      const gain = this.context.createGain();
+      const filter = this.context.createBiquadFilter();
+      filter.type = 'lowpass';
+      filter.frequency.value = 1400;
+      filter.Q.value = .2;
+      gain.gain.setValueAtTime(0, start);
+      gain.gain.linearRampToValueAtTime(.021, start + .25);
+      gain.gain.exponentialRampToValueAtTime(.0001, start + 2.4);
+      chord.forEach((frequency, index) => {
+        const oscillator = this.context.createOscillator();
+        oscillator.type = index === 0 ? 'sine' : 'triangle';
+        oscillator.frequency.setValueAtTime(frequency, start);
+        oscillator.connect(filter);
+        oscillator.start(start);
+        oscillator.stop(start + 2.3);
+      });
+      filter.connect(gain);
+      gain.connect(this.masterGain);
+      noteIndex += 1;
+    }, 1500);
+  }
+};
 const elements = {
   balance: document.getElementById('coin-balance'),
   mysticGemBalance: document.getElementById('mystic-gem-balance'),
+  musicToggle: document.getElementById('music-toggle'),
   gachaCount: document.getElementById('gacha-count'),
   orbStage: document.getElementById('orb-stage'),
   gachaTitle: document.getElementById('gacha-title'),
@@ -606,16 +671,22 @@ function saveGame() {
   }
 }
 
+function getDisplayRarityOdds(gacha) {
+  return rarities
+    .map((rarity, index) => ({ rarity, chance: gacha.odds[index] }))
+    .filter(({ chance }) => chance > 0);
+}
+
 function renderOdds() {
   elements.oddsList.replaceChildren();
-  rarities.forEach((rarity, index) => {
+  getDisplayRarityOdds(selectedGacha).forEach(({ rarity, chance }) => {
     const row = document.createElement('div');
-    row.className = `odds-item${selectedGacha.odds[index] === 0 ? ' zero' : ''}`;
+    row.className = 'odds-item';
     const label = document.createElement('span');
     label.textContent = `${rarity.short} · ${rarity.name}`;
-    const chance = document.createElement('strong');
-    chance.textContent = `${selectedGacha.odds[index]}%`;
-    row.append(label, chance);
+    const chanceValue = document.createElement('strong');
+    chanceValue.textContent = `${chance}%`;
+    row.append(label, chanceValue);
     elements.oddsList.append(row);
   });
 }
@@ -1381,7 +1452,13 @@ function animateLastPull(result, animationId) {
     }
 
     if (now >= nextChange) {
-      const rarity = rarities[Math.floor(Math.random() * rarities.length)];
+      const eligibleRarities = getDisplayRarityOdds(selectedGacha);
+      const probabilityTotal = eligibleRarities.reduce((total, { chance }) => total + chance, 0);
+      let rarityRoll = Math.random() * probabilityTotal;
+      const rarity = eligibleRarities.find(({ chance }) => {
+        rarityRoll -= chance;
+        return rarityRoll <= 0;
+      })?.rarity || eligibleRarities[eligibleRarities.length - 1].rarity;
       const name = rollOrb(rarity);
       const token = createOrbToken(name, rarity);
       token.classList.add('rolling-orb');
@@ -1479,6 +1556,29 @@ function resetGame() {
 
 document.getElementById('open-gachas').addEventListener('click', () => elements.gachaDialog.showModal());
 document.getElementById('close-gachas').addEventListener('click', () => elements.gachaDialog.close());
+function toggleAmbientMusic() {
+  const isEnabled = !ambientMusic.isPlaying;
+  if (isEnabled) {
+    const started = ambientMusic.turnOn();
+    if (!started) return;
+    elements.musicToggle.classList.add('is-on');
+    elements.musicToggle.setAttribute('aria-label', 'Turn background music off');
+    elements.musicToggle.setAttribute('aria-pressed', 'true');
+    elements.musicToggle.title = 'Background music on';
+    return;
+  }
+  ambientMusic.turnOff();
+  elements.musicToggle.classList.remove('is-on');
+  elements.musicToggle.setAttribute('aria-label', 'Turn background music on');
+  elements.musicToggle.setAttribute('aria-pressed', 'false');
+  elements.musicToggle.title = 'Background music off';
+}
+if (reducedMotionMedia.matches) {
+  elements.musicToggle.disabled = true;
+  elements.musicToggle.title = 'Background music is disabled for reduced motion';
+} else {
+  elements.musicToggle.addEventListener('click', toggleAmbientMusic);
+}
 document.getElementById('open-trading').addEventListener('click', () => elements.tradingDialog.showModal());
 document.getElementById('close-trading').addEventListener('click', () => elements.tradingDialog.close());
 document.getElementById('open-stock').addEventListener('click', () => elements.stockDialog.showModal());
