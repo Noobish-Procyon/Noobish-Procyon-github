@@ -1,6 +1,7 @@
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 const WORLD_SCALE = 1.1;
+const MOBILE_SCENE_SCALE = 0.5;
 
 canvas.width = Math.round(window.innerWidth * WORLD_SCALE);
 canvas.height = Math.round(window.innerHeight * WORLD_SCALE);
@@ -1083,6 +1084,8 @@ window.addEventListener('resize', () => {
 
 // Render
 function render() {
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+
     // Draw background with gradient
     const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
     gradient.addColorStop(0, '#0a0a15');
@@ -1091,25 +1094,34 @@ function render() {
     ctx.fillStyle = gradient;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     
-    // Draw grid background
-    ctx.strokeStyle = 'rgba(0, 255, 255, 0.05)';
-    ctx.lineWidth = 1;
-    for (let x = 0; x < canvas.width; x += 50) {
-        ctx.beginPath();
-        ctx.moveTo(x, 0);
-        ctx.lineTo(x, canvas.height);
-        ctx.stroke();
-    }
-    for (let y = 0; y < canvas.height; y += 50) {
-        ctx.beginPath();
-        ctx.moveTo(0, y);
-        ctx.lineTo(canvas.width, y);
-        ctx.stroke();
-    }
-    
     if (game.paused) {
         ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
+    }
+
+    const sceneScale = game.controlMode === 'mobile' ? MOBILE_SCENE_SCALE : 1;
+    const sceneOffsetX = canvas.width * (1 - sceneScale) / 2;
+    const sceneOffsetY = canvas.height * (1 - sceneScale) / 2;
+    ctx.setTransform(sceneScale, 0, 0, sceneScale, sceneOffsetX, sceneOffsetY);
+
+    // Extend the grid into the wider mobile view so the backdrop stays seamless.
+    const gridStartX = sceneScale < 1 ? -canvas.width : 0;
+    const gridEndX = sceneScale < 1 ? canvas.width * 2 : canvas.width;
+    const gridStartY = sceneScale < 1 ? -canvas.height : 0;
+    const gridEndY = sceneScale < 1 ? canvas.height * 2 : canvas.height;
+    ctx.strokeStyle = 'rgba(0, 255, 255, 0.05)';
+    ctx.lineWidth = 1;
+    for (let x = gridStartX; x < gridEndX; x += 50) {
+        ctx.beginPath();
+        ctx.moveTo(x, gridStartY);
+        ctx.lineTo(x, gridEndY);
+        ctx.stroke();
+    }
+    for (let y = gridStartY; y < gridEndY; y += 50) {
+        ctx.beginPath();
+        ctx.moveTo(gridStartX, y);
+        ctx.lineTo(gridEndX, y);
+        ctx.stroke();
     }
     
     // Draw player
@@ -1339,6 +1351,7 @@ function render() {
         ctx.stroke();
     }
     ctx.globalAlpha = 1;
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
 }
 
 // Game loop
