@@ -95,8 +95,8 @@ function spawnShape() {
     }
 }
 
-// ⭐ Slower spawn interval (4 seconds)
-setInterval(spawnShape, 4000);
+// Spawn a new shape every 2.5 seconds.
+setInterval(spawnShape, 2500);
 
 // ---------------------- DRAW SHAPES ----------------------
 function drawShape(s) {
