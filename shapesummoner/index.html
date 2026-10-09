@@ -252,11 +252,11 @@ function spawnBoss() {
   }
 
   if (roll < 0.99) {
-    boss = { x:Math.random()*c.width, y:Math.random()*c.height, r:150, hp:1200, maxHp:120, s:4, col:"gold", elite:false, cd:0, type:"god" };
+    boss = { x:Math.random()*c.width, y:Math.random()*c.height, r:150, hp:600, maxHp:600, s:4, col:"gold", elite:false, cd:0, type:"god" };
     return;
   }
 
-  boss = { x:Math.random()*c.width, y:Math.random()*c.height, r:180, hp:5000, maxHp:180, s:4.5, col:"darkgreen", elite:false, cd:0, type:"dragon" };
+  boss = { x:Math.random()*c.width, y:Math.random()*c.height, r:180, hp:1500, maxHp:1500, s:4.5, col:"darkgreen", elite:false, cd:0, type:"dragon" };
 }
 
 setInterval(() => {
@@ -709,7 +709,9 @@ function update() {
         if (boss.hp <= 0) {
 
           if (boss.type === "god") {
-            rewardGod();            offerGodCards();
+            boss = null;
+            rewardGod();
+            offerGodCards();
             bossDropText = "GOD REWARD!";
             setTimeout(() => bossDropText = "", 3000);
             saveGame();
