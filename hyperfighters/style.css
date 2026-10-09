@@ -19,6 +19,8 @@ body {
 
 #gameCanvas {
     display: block;
+    width: 100%;
+    height: 100%;
     cursor: crosshair;
     background: linear-gradient(135deg, #1a1a1a 0%, #0a0a0a 100%);
 }
@@ -328,17 +330,21 @@ body {
 body.mobile-mode .mobile-controls { display: block; }
 .virtual-stick { position: fixed; z-index: 20; bottom: 24px; left: 24px; width: 126px; height: 126px; border: 2px solid rgba(0, 255, 255, .65); border-radius: 50%; background: rgba(0, 255, 255, .12); touch-action: none; pointer-events: auto; }
 .virtual-stick-knob { position: absolute; top: 50%; left: 50%; width: 54px; height: 54px; border: 2px solid #00FFFF; border-radius: 50%; background: rgba(0, 255, 255, .35); transform: translate(-50%, -50%); pointer-events: none; }
-.mobile-ability-buttons { position: fixed; right: 16px; bottom: 18px; z-index: 20; display: grid; grid-template-columns: repeat(3, 58px); gap: 7px; pointer-events: auto; }
-.mobile-ability-buttons button { min-height: 48px; padding: 4px; border: 1px solid #00FFFF; border-radius: 10px; background: rgba(16, 27, 45, .9); color: #00FFFF; font-size: 10px; touch-action: none; }
+.mobile-ability-buttons { position: fixed; right: 16px; bottom: 18px; z-index: 20; display: grid; grid-template-columns: repeat(3, 60px); gap: 7px; pointer-events: auto; }
+.mobile-ability-buttons button { display: flex; min-height: 58px; flex-direction: column; align-items: center; justify-content: center; gap: 2px; padding: 4px 2px; border: 1px solid rgba(0, 255, 255, .65); border-radius: 7px; background: rgba(10, 23, 38, .94); color: #00FFFF; touch-action: none; }
+.ability-key { color: #a6bdc7; font: 700 8px/1 ui-monospace, SFMono-Regular, Menlo, monospace; }
+.ability-title { font: 700 9px/1.1 Arial, sans-serif; }
+.ability-state { color: #9af3bb; font: 700 8px/1 ui-monospace, SFMono-Regular, Menlo, monospace; }
+.mobile-ability-buttons button.cooldown-active .ability-state { color: #ffd47b; }
 .mobile-ability-buttons button:active { background: #163c53; }
-body.mobile-mode #uiOverlay { pointer-events: none; }
-body.mobile-mode #pauseBtn { pointer-events: auto; }
+.mobile-ability-buttons button:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+body.mobile-mode #uiOverlay { display: none; }
 @media (max-width: 600px) {
     .controls-dialog { padding: 26px 20px; }
     .virtual-stick { left: 12px; bottom: 14px; width: 106px; height: 106px; }
     .virtual-stick-knob { width: 46px; height: 46px; }
-    .mobile-ability-buttons { right: 10px; bottom: 12px; grid-template-columns: repeat(3, 52px); gap: 5px; }
-    .mobile-ability-buttons button { min-height: 42px; font-size: 9px; }
+    .mobile-ability-buttons { right: 10px; bottom: 12px; grid-template-columns: repeat(3, 54px); gap: 5px; }
+    .mobile-ability-buttons button { min-height: 52px; }
 }
 
 #gameOverScreen.hidden {

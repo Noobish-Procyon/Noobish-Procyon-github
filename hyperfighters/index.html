@@ -60,13 +60,14 @@
         <div id="mobileControls" class="mobile-controls" aria-label="Mobile game controls">
             <div class="virtual-stick" id="moveStick" aria-label="Movement joystick"><div class="virtual-stick-knob"></div></div>
             <div class="mobile-ability-buttons">
-                <button type="button" data-ability="q">NOVA</button>
-                <button type="button" data-ability="e">SHIELD</button>
-                <button type="button" data-ability="Shift">DASH</button>
-                <button type="button" data-ability="v">FORM</button>
-                <button type="button" data-ability="z">LASER</button>
-                <button type="button" data-ability="x">PUSH</button>
-                <button type="button" data-ability="c">SHOT</button>
+                <button type="button" data-ability="q" aria-label="Nova"><span class="ability-key">Q</span><span class="ability-title">NOVA</span><span class="ability-state">READY</span></button>
+                <button type="button" data-ability="e" aria-label="Shield"><span class="ability-key">E</span><span class="ability-title">SHIELD</span><span class="ability-state">READY</span></button>
+                <button type="button" data-ability="Shift" aria-label="Dash"><span class="ability-key">SHIFT</span><span class="ability-title">DASH</span><span class="ability-state">READY</span></button>
+                <button type="button" data-ability="v" aria-label="Transform"><span class="ability-key">V</span><span class="ability-title">FORM</span><span class="ability-state">READY</span></button>
+                <button type="button" data-ability="z" aria-label="Laser"><span class="ability-key">Z</span><span class="ability-title">LASER</span><span class="ability-state">READY</span></button>
+                <button type="button" data-ability="x" aria-label="Push"><span class="ability-key">X</span><span class="ability-title">PUSH</span><span class="ability-state">READY</span></button>
+                <button type="button" data-ability="c" aria-label="Projectile"><span class="ability-key">C</span><span class="ability-title">SHOT</span><span class="ability-state">READY</span></button>
+                <button type="button" class="mobile-pause" onclick="game.togglePause()" aria-label="Pause game"><span class="ability-key">II</span><span class="ability-title">PAUSE</span><span class="ability-state">MENU</span></button>
             </div>
         </div>
 

@@ -1,8 +1,9 @@
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
+const WORLD_SCALE = 1.1;
 
-canvas.width = window.innerWidth;
-canvas.height = window.innerHeight;
+canvas.width = Math.round(window.innerWidth * WORLD_SCALE);
+canvas.height = Math.round(window.innerHeight * WORLD_SCALE);
 
 // Game state
 const game = {
@@ -511,13 +512,23 @@ const game = {
 
     updateAbilityDisplay() {
         const status = (cooldown, label) => cooldown > 0 ? `${label} ${Math.ceil(cooldown / 60)}s` : `${label} READY`;
-        document.getElementById('novaStatus').textContent = this.player.novaCharging ? `Q NOVA CHARGING ${Math.ceil(this.player.novaCharge)}%` : status(this.player.novaCooldown, 'Q NOVA');
-        document.getElementById('shieldStatus').textContent = this.player.shieldTime > 0 ? `E SHIELD ${Math.ceil(this.player.shieldTime / 60)}s` : status(this.player.shieldCooldown, 'E SHIELD');
-        document.getElementById('dashStatus').textContent = status(this.player.dashCooldown, 'SHIFT DASH');
-        document.getElementById('transformStatus').textContent = this.player.transformActive ? `V TRANSFORM ${Math.ceil(this.player.transformDuration / 60)}s` : status(this.player.transformCooldown, 'V TRANSFORM');
-        document.getElementById('laserStatus').textContent = this.player.laserCharging ? `Z LASER CHARGING ${Math.ceil(this.player.laserCharge)}%` : status(this.player.laserCooldown, 'Z LASER');
-        document.getElementById('xMoveStatus').textContent = status(this.player.xMoveCooldown, 'X MOVE');
-        document.getElementById('cProjectileStatus').textContent = status(this.player.cProjectileCooldown, 'C PROJECTILE');
+        const seconds = cooldown => cooldown > 0 ? `${Math.ceil(cooldown / 60)}s` : 'READY';
+        const abilities = [
+            { key: 'q', element: 'novaStatus', label: 'Q NOVA', cooldown: this.player.novaCooldown, desktop: this.player.novaCharging ? `Q NOVA CHARGING ${Math.ceil(this.player.novaCharge)}%` : status(this.player.novaCooldown, 'Q NOVA'), mobile: this.player.novaCharging ? `CHARGING ${Math.ceil(this.player.novaCharge)}%` : seconds(this.player.novaCooldown), active: this.player.novaCharging },
+            { key: 'e', element: 'shieldStatus', label: 'E SHIELD', cooldown: this.player.shieldCooldown, desktop: this.player.shieldTime > 0 ? `E SHIELD ${Math.ceil(this.player.shieldTime / 60)}s` : status(this.player.shieldCooldown, 'E SHIELD'), mobile: this.player.shieldTime > 0 ? `ACTIVE ${Math.ceil(this.player.shieldTime / 60)}s` : seconds(this.player.shieldCooldown), active: this.player.shieldTime > 0 },
+            { key: 'Shift', element: 'dashStatus', label: 'SHIFT DASH', cooldown: this.player.dashCooldown, desktop: status(this.player.dashCooldown, 'SHIFT DASH'), mobile: seconds(this.player.dashCooldown) },
+            { key: 'v', element: 'transformStatus', label: 'V TRANSFORM', cooldown: this.player.transformCooldown, desktop: this.player.transformActive ? `V TRANSFORM ${Math.ceil(this.player.transformDuration / 60)}s` : status(this.player.transformCooldown, 'V TRANSFORM'), mobile: this.player.transformActive ? `ACTIVE ${Math.ceil(this.player.transformDuration / 60)}s` : seconds(this.player.transformCooldown), active: this.player.transformActive },
+            { key: 'z', element: 'laserStatus', label: 'Z LASER', cooldown: this.player.laserCooldown, desktop: this.player.laserCharging ? `Z LASER CHARGING ${Math.ceil(this.player.laserCharge)}%` : status(this.player.laserCooldown, 'Z LASER'), mobile: this.player.laserCharging ? `CHARGING ${Math.ceil(this.player.laserCharge)}%` : seconds(this.player.laserCooldown), active: this.player.laserCharging },
+            { key: 'x', element: 'xMoveStatus', label: 'X MOVE', cooldown: this.player.xMoveCooldown, desktop: status(this.player.xMoveCooldown, 'X MOVE'), mobile: seconds(this.player.xMoveCooldown) },
+            { key: 'c', element: 'cProjectileStatus', label: 'C PROJECTILE', cooldown: this.player.cProjectileCooldown, desktop: status(this.player.cProjectileCooldown, 'C PROJECTILE'), mobile: seconds(this.player.cProjectileCooldown) }
+        ];
+        abilities.forEach(ability => {
+            document.getElementById(ability.element).textContent = ability.desktop;
+            const button = document.querySelector(`[data-ability="${ability.key}"]`);
+            button.querySelector('.ability-state').textContent = ability.mobile;
+            button.classList.toggle('cooldown-active', ability.cooldown > 0 && !ability.active);
+            button.setAttribute('aria-label', `${ability.label}, ${ability.mobile.toLowerCase()}`);
+        });
     },
     
     shoot(target) {
@@ -1066,8 +1077,8 @@ document.addEventListener('mouseup', (event) => {
 
 // Window resize
 window.addEventListener('resize', () => {
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
+    canvas.width = Math.round(window.innerWidth * WORLD_SCALE);
+    canvas.height = Math.round(window.innerHeight * WORLD_SCALE);
 });
 
 // Render
