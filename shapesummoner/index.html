@@ -4,7 +4,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Shape Summoner</title>
 <style>
-body { margin:0; overflow:hidden; background:#071019; color:#e8f4f1; font-family:Arial,sans-serif; }
+body { margin:0; overflow:hidden; background:#071019; color:#e8f4f1; font-family:"Trebuchet MS","Segoe UI",sans-serif; }
 button { font: inherit; }
 
 canvas {
@@ -34,17 +34,17 @@ canvas {
 
 .controls-modal {
   position:fixed; inset:0; z-index:10; display:grid; place-items:center;
-  padding:20px; background:rgba(0,0,0,.88); color:#fff; font-family:Arial,sans-serif;
+  padding:20px; background:radial-gradient(ellipse at 50% 42%,rgba(35,94,88,.24),transparent 54%),rgba(2,8,14,.88); color:#fff;
 }
 .controls-dialog {
-  width:min(460px,100%); padding:30px; border:1px solid #75e6a577; border-radius:16px;
-  background:linear-gradient(145deg,#142b30,#101921); text-align:center; box-shadow:0 24px 80px #000a,0 0 40px #75e6a51c;
+  width:min(480px,100%); padding:32px; border:1px solid #75e6a577; border-radius:12px;
+  background:linear-gradient(145deg,rgba(20,43,48,.98),rgba(10,20,29,.98)); text-align:center; box-shadow:0 28px 90px #000b,0 0 54px #75e6a51c;
 }
-.controls-dialog h1 { margin:0 0 10px; color:#e7fff2; font-size:clamp(24px,6vw,38px); letter-spacing:.04em; }
-.controls-dialog p { margin:0 0 22px; color:#9ebbb3; }
+.controls-dialog h1 { margin:0 0 10px; color:#e7fff2; font-size:clamp(24px,6vw,38px); }
+.controls-dialog p { margin:0 0 22px; color:#9ebbb3; line-height:1.5; }
 .control-options { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
-.control-options button { min-height:90px; border:1px solid #75e6a566; border-radius:10px; background:linear-gradient(140deg,#1c3836,#17252d); color:white; cursor:pointer; transition:transform .16s,border-color .16s,box-shadow .16s; }
-.control-options button:hover { transform:translateY(-3px); border-color:#75e6a5; box-shadow:0 10px 24px #0005; }
+.control-options button { min-height:96px; padding:14px; border:1px solid #75e6a566; border-radius:7px; background:linear-gradient(140deg,#1c3836,#17252d); color:white; cursor:pointer; transition:transform .16s,border-color .16s,box-shadow .16s,background .16s; }
+.control-options button:hover,.control-options button:focus-visible { transform:translateY(-2px); border-color:#75e6a5; background:linear-gradient(140deg,#214941,#1a3038); box-shadow:0 10px 24px #0005; outline:none; }
 .control-options strong,.control-options span { display:block; }
 .control-options strong { margin-bottom:7px; color:#75e6a5; }
 .control-options span { font-size:12px; }
@@ -56,6 +56,7 @@ body.mobile-mode .mobile-controls { display:flex; }
 .mobile-action-pad { display:grid; grid-template-columns:repeat(2,64px); gap:7px; pointer-events:auto; }
 .mobile-action-pad button { min-height:48px; padding:4px; border:1px solid #75e6a577; border-radius:10px; background:linear-gradient(145deg,#19353aee,#101a22ee); color:#d8f6eb; font-size:10px; font-weight:700; letter-spacing:.04em; box-shadow:0 6px 18px #0007; touch-action:none; }
 .mobile-action-pad button:active,.mobile-action-pad .selected { border-color:#75e6a5; background:linear-gradient(145deg,#75e6a5,#39af9a); color:#071019; }
+.mobile-action-pad button:focus-visible { outline:2px solid #f5d995; outline-offset:2px; }
 body.mobile-mode #saveHint { display:none; }
 @media(max-width:520px) { .controls-dialog { padding:24px 18px; } .mobile-controls { padding:10px; } .virtual-stick { width:96px;height:96px; } .virtual-stick-knob { width:42px;height:42px; } .mobile-action-pad { grid-template-columns:repeat(2,56px); gap:5px; } .mobile-action-pad button { min-height:42px;font-size:10px; } }
 </style>
@@ -393,20 +394,97 @@ function summonAt(summonX, summonY) {
   fuseSummons();
 }
 
+function getOverlayCards(desktopWidth, desktopHeight, mobileHeight) {
+  const stacked = c.width < 680;
+  const gap = stacked ? 9 : 18;
+  const width = stacked
+    ? Math.max(0, Math.min(360, c.width - 32))
+    : Math.max(0, Math.min(desktopWidth, (c.width - 56 - gap * 2) / 3));
+  const height = stacked
+    ? Math.min(mobileHeight, Math.max(48, (c.height - 170 - gap * 2) / 3))
+    : desktopHeight;
+  const totalWidth = stacked ? width : width * 3 + gap * 2;
+  const totalHeight = height * 3 + gap * 2;
+  const left = (c.width - totalWidth) / 2;
+  const top = stacked
+    ? Math.min(Math.max(62, (c.height - totalHeight) * .52 + 44), Math.max(62, c.height - totalHeight - 8))
+    : Math.max(160, (c.height - height) / 2 + 56);
+  return Array.from({ length: 3 }, (_, index) => ({
+    x: stacked ? left : left + index * (width + gap),
+    y: stacked ? top + index * (height + gap) : top,
+    width,
+    height
+  }));
+}
+
+function drawOverlayBackdrop() {
+  const shade = x.createLinearGradient(0, 0, c.width, c.height);
+  shade.addColorStop(0, "rgba(3,11,17,.82)");
+  shade.addColorStop(1, "rgba(5,9,18,.9)");
+  x.fillStyle = shade;
+  x.fillRect(0, 0, c.width, c.height);
+  const glow = x.createRadialGradient(c.width / 2, c.height / 2, 0, c.width / 2, c.height / 2, Math.max(c.width, c.height) * .66);
+  glow.addColorStop(0, "rgba(64,145,120,.16)");
+  glow.addColorStop(1, "rgba(5,9,18,0)");
+  x.fillStyle = glow;
+  x.fillRect(0, 0, c.width, c.height);
+}
+
+function drawOverlayHeader(kicker, title, subtitle, cardTop) {
+  const titleY = Math.max(48, cardTop - 58);
+  x.textAlign = "center";
+  x.fillStyle = "#75e6a5";
+  x.font = "700 10px ui-monospace, monospace";
+  x.fillText(kicker, c.width / 2, titleY - 24);
+  x.fillStyle = "#f0fff8";
+  x.font = `700 ${Math.min(34, Math.max(23, c.width * .055))}px 'Trebuchet MS', sans-serif`;
+  x.fillText(title, c.width / 2, titleY, c.width - 32);
+  x.fillStyle = "#9ebbb3";
+  x.font = "12px 'Trebuchet MS', sans-serif";
+  x.fillText(subtitle, c.width / 2, titleY + 20, c.width - 32);
+  x.textAlign = "left";
+}
+
+function drawOverlayCard(rect, kicker, title, footer, accent, selected = false) {
+  x.save();
+  x.shadowColor = accent;
+  x.shadowBlur = selected ? 22 : 12;
+  const fill = x.createLinearGradient(rect.x, rect.y, rect.x + rect.width, rect.y + rect.height);
+  fill.addColorStop(0, selected ? "#1b403d" : "#172a32");
+  fill.addColorStop(1, "#101922");
+  x.fillStyle = fill;
+  x.beginPath();
+  x.roundRect(rect.x, rect.y, rect.width, rect.height, 8);
+  x.fill();
+  x.shadowBlur = 0;
+  x.strokeStyle = selected ? accent : `${accent}99`;
+  x.lineWidth = selected ? 2 : 1;
+  x.stroke();
+  x.fillStyle = accent;
+  x.fillRect(rect.x + 14, rect.y + 12, 20, 2);
+  x.textAlign = "center";
+  x.fillStyle = "#91b5ac";
+  x.font = "700 9px ui-monospace, monospace";
+  x.fillText(kicker, rect.x + rect.width / 2, rect.y + Math.min(28, rect.height * .27), rect.width - 20);
+  x.fillStyle = "#f2fff8";
+  x.font = `700 ${rect.width < 210 ? 12 : 14}px 'Trebuchet MS', sans-serif`;
+  x.fillText(title, rect.x + rect.width / 2, rect.y + rect.height * .56, rect.width - 24);
+  x.fillStyle = selected ? accent : "#8aa69f";
+  x.font = "700 8px ui-monospace, monospace";
+  x.fillText(footer, rect.x + rect.width / 2, rect.y + rect.height - 9, rect.width - 16);
+  x.textAlign = "left";
+  x.restore();
+}
+
 onclick = e => {
   if (e.target.closest("#mobileControls, #controlsModal")) return;
   if (paused) {
-    const w = 200, h = 80, g = 40;
-    const sx = c.width/2 - (w*1.5 + g);
-    const y = 320;
-
-    for (let i = 1; i <= 3; i++) {
-      const xx = sx + (i-1)*(w+g);
-
-      if (e.clientX >= xx && e.clientX <= xx+w &&
-          e.clientY >= y && e.clientY <= y+h) {
-
-        currentSlot = i;
+    const slotCards = getOverlayCards(200, 80, 76);
+    for (let index = 0; index < slotCards.length; index++) {
+      const card = slotCards[index];
+      if (e.clientX >= card.x && e.clientX <= card.x + card.width &&
+          e.clientY >= card.y && e.clientY <= card.y + card.height) {
+        currentSlot = index + 1;
         loadGame();
         paused = false;
         return;
@@ -416,15 +494,12 @@ onclick = e => {
   }
 
   if (choose) {
-    const w=250,h=150,g=50;
-    const sx = c.width/2 - (w*1.5 + g);
-    const y = 250;
-
-    for (let i=0;i<3;i++) {
-      const xx = sx + i*(w+g);
-      if (e.clientX>=xx && e.clientX<=xx+w &&
-          e.clientY>=y && e.clientY<=y+h) {
-        cards[i].apply();
+    const upgradeCards = getOverlayCards(250, 150, 112);
+    for (let index = 0; index < upgradeCards.length; index++) {
+      const card = upgradeCards[index];
+      if (e.clientX >= card.x && e.clientX <= card.x + card.width &&
+          e.clientY >= card.y && e.clientY <= card.y + card.height) {
+        cards[index].apply();
         choose = false;
         saveGame();
         return;
@@ -754,32 +829,17 @@ function draw() {
 
   // PAUSE MENU
   if (paused) {
-    x.fillStyle = "rgba(0,0,0,0.7)";
-    x.fillRect(0,0,c.width,c.height);
-
-    x.fillStyle = "white";
-    x.font = "50px Arial";
-    x.fillText("PAUSED", c.width/2 - 120, 150);
-
-    x.font = "30px Arial";
-    x.fillText("Select Save Slot:", c.width/2 - 150, 250);
-
-    const w = 200, h = 80, g = 40;
-    const sx = c.width/2 - (w*1.5 + g);
-    const y = 320;
-
-    for (let i = 1; i <= 3; i++) {
-      const xx = sx + (i-1)*(w+g);
-
-      x.fillStyle = (currentSlot === i) ? "#444" : "#222";
-      x.fillRect(xx, y, w, h);
-
-      x.strokeStyle = "white";
-      x.strokeRect(xx, y, w, h);
-
-      x.fillStyle = "white";
-      x.fillText("Slot " + i, xx + 60, y + 50);
-    }
+    drawOverlayBackdrop();
+    const slotCards = getOverlayCards(200, 80, 76);
+    drawOverlayHeader("SAVE SYSTEM", "PAUSED", "Choose a save slot to continue", slotCards[0].y);
+    slotCards.forEach((card, index) => drawOverlayCard(
+      card,
+      `SAVE SLOT 0${index + 1}`,
+      `SLOT ${index + 1}`,
+      currentSlot === index + 1 ? "ACTIVE SLOT" : "SELECT SLOT",
+      currentSlot === index + 1 ? "#75e6a5" : "#71cbd0",
+      currentSlot === index + 1
+    ));
 
     return;
   }
@@ -883,44 +943,51 @@ function draw() {
 
   // Upgrade UI
   if (choose) {
-    x.fillStyle="rgba(0,0,0,0.7)";
-    x.fillRect(0,0,c.width,c.height);
-
-    x.fillStyle="white";
-    x.font="40px Arial";
-    x.fillText("Choose an Upgrade", c.width/2 - 200, 150);
-
-    const w=250,h=150,g=50;
-    const sx=c.width/2-(w*1.5+g);
-    const y=250;
-
-    cards.forEach((card,i)=>{
-      const xx=sx+i*(w+g);
-      x.fillStyle="#222";
-      x.fillRect(xx,y,w,h);
-
-      x.strokeStyle="white";
-      x.strokeRect(xx,y,w,h);
-
-      x.fillStyle="white";
-      x.font="24px Arial";
-      x.fillText(card.name, xx+20, y+h/2);
-    });
+    drawOverlayBackdrop();
+    const upgradeCards = getOverlayCards(250, 150, 112);
+    drawOverlayHeader("SYSTEM ENHANCEMENT", "LEVEL UP", "Select one upgrade to continue", upgradeCards[0].y);
+    const accents = ["#75e6a5", "#71cbd0", "#c29aff"];
+    cards.forEach((card, index) => drawOverlayCard(
+      upgradeCards[index],
+      `UPGRADE 0${index + 1}`,
+      card.name,
+      "TAP TO SELECT",
+      accents[index % accents.length]
+    ));
 
     if (cards.length === 0) choose = false;
   }
 
   // Death screen
   if (dead && !choose) {
-    x.fillStyle="rgba(0,0,0,0.7)";
-    x.fillRect(0,0,c.width,c.height);
-
-    x.fillStyle="white";
-    x.font="60px Arial";
-    x.fillText("YOU DIED", c.width/2 - 150, c.height/2 - 40);
-
-    x.font="30px Arial";
-    x.fillText("Refresh page to restart", c.width/2 - 180, c.height/2 + 20);
+    drawOverlayBackdrop();
+    const panelWidth = Math.min(440, c.width - 32);
+    const panelHeight = Math.min(210, c.height - 32);
+    const panelX = (c.width - panelWidth) / 2;
+    const panelY = (c.height - panelHeight) / 2;
+    x.save();
+    x.shadowColor = "#ff647e";
+    x.shadowBlur = 28;
+    x.fillStyle = "rgba(17, 24, 34, .96)";
+    x.beginPath();
+    x.roundRect(panelX, panelY, panelWidth, panelHeight, 10);
+    x.fill();
+    x.shadowBlur = 0;
+    x.strokeStyle = "rgba(255,100,126,.7)";
+    x.lineWidth = 1;
+    x.stroke();
+    x.textAlign = "center";
+    x.fillStyle = "#ff9cae";
+    x.font = "700 10px ui-monospace, monospace";
+    x.fillText("RUN TERMINATED", c.width / 2, panelY + panelHeight * .27);
+    x.fillStyle = "#fff2f2";
+    x.font = `700 ${Math.min(42, Math.max(28, c.width * .09))}px 'Trebuchet MS', sans-serif`;
+    x.fillText("YOU DIED", c.width / 2, panelY + panelHeight * .56, panelWidth - 24);
+    x.fillStyle = "#aeb9bd";
+    x.font = "12px 'Trebuchet MS', sans-serif";
+    x.fillText("Refresh the page to begin again", c.width / 2, panelY + panelHeight * .78, panelWidth - 24);
+    x.textAlign = "left";
+    x.restore();
   }
 }
 

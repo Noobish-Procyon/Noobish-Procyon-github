@@ -5,7 +5,7 @@ canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
 let score = 0;
-const scoreDisplay = document.getElementById("score");
+const scoreDisplay = document.getElementById("scoreValue");
 
 // ---------------------- UPGRADE VARIABLES ----------------------
 let scoreMultiplier = 1;
@@ -233,7 +233,8 @@ function update() {
 
         if (dist < blackHole.radius) {
             score += s.points * scoreMultiplier;
-            scoreDisplay.textContent = "Score: " + score;
+            scoreDisplay.textContent = score.toLocaleString();
+            refreshUpgradeButtons();
             return false;
         }
         return true;
@@ -345,14 +346,38 @@ const upgrades = {
     }
 };
 
+function isUpgradeMaxed(name) {
+    if (name === "doublePoints") return scoreMultiplierLevel >= scoreMultiplierMax;
+    if (name === "autoCollector") return autoCollectorLevel >= autoCollectorMax;
+    return false;
+}
+
+function refreshUpgradeButtons() {
+    document.querySelectorAll("#shop [data-upgrade]").forEach(button => {
+        const name = button.dataset.upgrade;
+        const upgrade = upgrades[name];
+        const maxed = isUpgradeMaxed(name);
+        button.disabled = maxed || score < upgrade.cost;
+        button.querySelector(".upgrade-cost").textContent = maxed
+            ? "MAX LEVEL"
+            : `${upgrade.cost} points`;
+        button.setAttribute("aria-label", maxed
+            ? `${button.querySelector(".upgrade-title").textContent}, maximum level reached`
+            : `${button.querySelector(".upgrade-title").textContent}, costs ${upgrade.cost} points`);
+    });
+}
+
 function buyUpgrade(name) {
     const u = upgrades[name];
-    if (score >= u.cost) {
+    if (score >= u.cost && !isUpgradeMaxed(name)) {
         score -= u.cost;
         u.apply();
-        scoreDisplay.textContent = "Score: " + score;
+        scoreDisplay.textContent = score.toLocaleString();
+        refreshUpgradeButtons();
     }
 }
+
+refreshUpgradeButtons();
 
 // ---------------------- ANNOUNCE ----------------------
 function announce(text) {
