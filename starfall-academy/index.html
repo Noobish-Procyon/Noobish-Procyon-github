@@ -165,8 +165,9 @@
       if (state.locked || (state.turn || 'player') !== 'player') return;
       state.attempts++;
       if (value === state.question.answer) {
-        state.locked = true; state.turn = 'enemy'; state.solved++; state.streak++; state.xp += 25; state.stars += 3; const damage = starPouchDamage(25); state.enemyHp = Math.max(0, state.enemyHp - damage); state.petXp = Math.min(100, state.petXp + 20); button.classList.add('correct'); document.getElementById('player-fighter').classList.add('cast'); document.getElementById('spell-visual').classList.add('cast'); launchProjectile('player', state.spell); setTimeout(() => { document.getElementById('player-fighter').classList.remove('cast'); document.getElementById('spell-visual').classList.remove('cast'); }, 650); const leveledUp = updateLevel(); saveState();
-        feedback.className = 'feedback'; feedback.textContent = state.streak > 1 ? `${state.spell.toUpperCase()} burst! ${state.streak} in a row. ${formatDamage(damage)} damage. +25 XP, +3 stars.` : `${state.spell.toUpperCase()} spell cast for ${formatDamage(damage)} damage! +25 XP, +3 stars.`;
+        const xpReward = state.levelGoal * 0.25;
+        state.locked = true; state.turn = 'enemy'; state.solved++; state.streak++; state.xp += xpReward; state.stars += 3; const damage = starPouchDamage(25); state.enemyHp = Math.max(0, state.enemyHp - damage); state.petXp = Math.min(100, state.petXp + 20); button.classList.add('correct'); document.getElementById('player-fighter').classList.add('cast'); document.getElementById('spell-visual').classList.add('cast'); launchProjectile('player', state.spell); setTimeout(() => { document.getElementById('player-fighter').classList.remove('cast'); document.getElementById('spell-visual').classList.remove('cast'); }, 650); const leveledUp = updateLevel(); saveState();
+        feedback.className = 'feedback'; feedback.textContent = state.streak > 1 ? `${state.spell.toUpperCase()} burst! ${state.streak} in a row. ${formatDamage(damage)} damage. +${xpReward} XP, +3 stars.` : `${state.spell.toUpperCase()} spell cast for ${formatDamage(damage)} damage! +${xpReward} XP, +3 stars.`;
         answers.querySelectorAll('button').forEach(item => item.disabled = true); updateHud();
         if (leveledUp) setTimeout(() => toast.classList.add('show'), 480);
         if (state.enemyHp === 0) {
