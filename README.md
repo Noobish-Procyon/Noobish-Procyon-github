@@ -114,6 +114,15 @@ portals to navigate loops, reach new areas, and find the end of the route.
 
 Launch: [`shapeportals/index.html`](shapeportals/index.html)
 
+### ShapeFighters
+
+Choose a shape and one of four elements, then take turns battling rival shapes.
+Your first shape and element are free; earn coins in battles to unlock the
+other shapes and elements, buy auras, and unlock two +25-all-stat evolutions
+for each shape. Progress is saved in the browser.
+
+Launch: [`shapefighters/index.html`](shapefighters/index.html)
+
 ## Project Notes
 
 - Each project is a standalone browser experience with its own entry page and
@@ -123,4 +132,3 @@ Launch: [`shapeportals/index.html`](shapeportals/index.html)
 - There is no shared package manager or build configuration at the repository
 	root.
 - Browser support, controls, and saved progress vary between projects.
-
