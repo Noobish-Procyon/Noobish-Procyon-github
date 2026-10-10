@@ -29,7 +29,8 @@
     </section>
 
     <nav class="main-nav" aria-label="Main menu">
-      <button class="nav-button active" type="button" data-screen="battle">01 <span>Battle</span></button>
+      <button class="nav-button active" type="button" data-screen="menu">00 <span>Menu</span></button>
+      <button class="nav-button" type="button" data-screen="battle">01 <span>Arena</span></button>
       <button class="nav-button" type="button" data-screen="shapes">02 <span>My shape</span></button>
       <button class="nav-button" type="button" data-screen="auras">03 <span>Aura shop</span></button>
       <div class="record"><span id="record">0 W</span><i aria-hidden="true">·</i><span id="losses">0 L</span></div>
@@ -37,32 +38,52 @@
 
     <div id="notice" class="notice" role="status" aria-live="polite" hidden></div>
 
-    <section class="screen active" id="screen-battle" aria-labelledby="battle-title">
+    <section class="screen active" id="screen-menu" aria-labelledby="menu-title">
+      <div class="section-heading">
+        <div><p class="eyebrow">LEAGUE HUB</p><h2 id="menu-title">Your fighter is ready</h2></div>
+        <span class="pill" id="menu-record">0 W · 0 L</span>
+      </div>
+      <div class="menu-panel">
+        <div class="menu-fighter">
+          <div class="shape-emblem" id="menu-emblem" aria-hidden="true"><span></span></div>
+          <div><h3 id="menu-fighter-name">Storm Circle</h3><p id="menu-fighter-element">Storm · BASE</p></div>
+        </div>
+        <div class="stat-grid menu-stats" id="menu-stats"></div>
+        <div class="menu-actions">
+          <button class="primary-button" id="enter-arena" type="button">Enter the arena <span aria-hidden="true">→</span></button>
+          <button class="menu-link" type="button" data-screen="shapes">My shape</button>
+          <button class="menu-link" type="button" data-screen="auras">Aura shop</button>
+        </div>
+      </div>
+      <p class="menu-feedback" id="menu-feedback" role="status" aria-live="polite"></p>
+    </section>
+
+    <section class="screen" id="screen-battle" aria-labelledby="battle-title" hidden>
       <div class="section-heading">
         <div><p class="eyebrow">THE ARENA</p><h2 id="battle-title">Ready for a challenge?</h2></div>
         <span class="pill" id="battle-state">YOUR TURN</span>
       </div>
       <div class="arena">
-        <article class="fighter-card player-card">
+        <article class="fighter-card player-card" id="player-card">
           <div class="fighter-heading"><span>YOUR FIGHTER</span><span class="fighter-level" id="player-stage">BASE</span></div>
-          <div class="fighter-profile">
-            <div class="shape-emblem" id="player-emblem" aria-hidden="true"><span></span></div>
-            <div><h3 id="player-name">Circle</h3><p id="player-element">Storm · Circle</p></div>
-          </div>
           <div class="health-label"><span>HP</span><span id="player-hp-label">100 / 100</span></div>
           <div class="health-track"><i id="player-hp-bar"></i></div>
-          <div class="stat-grid" id="player-stats"></div>
+          <div class="fighter-profile">
+            <div><h3 id="player-name">Circle</h3><p id="player-element">Storm · Circle</p></div>
+            <div class="shape-emblem" id="player-emblem" aria-hidden="true"><span></span></div>
+          </div>
+          <div class="moves" id="moves" aria-label="Choose an attack" hidden></div>
           <p class="aura-equipped" id="equipped-aura">No aura equipped</p>
         </article>
         <div class="versus" aria-hidden="true">VS</div>
         <article class="fighter-card rival-card" id="rival-card">
           <div class="fighter-heading"><span>CHALLENGER</span><span class="fighter-level" id="rival-stage">—</span></div>
-          <div class="fighter-profile">
-            <div class="shape-emblem" id="rival-emblem" aria-hidden="true"><span></span></div>
-            <div><h3 id="rival-name">No rival yet</h3><p id="rival-element">Start a battle to meet your opponent.</p></div>
-          </div>
           <div class="health-label"><span>HP</span><span id="rival-hp-label">—</span></div>
           <div class="health-track rival-health"><i id="rival-hp-bar"></i></div>
+          <div class="fighter-profile">
+            <div><h3 id="rival-name">No rival yet</h3><p id="rival-element">Start a battle to meet your opponent.</p></div>
+            <div class="shape-emblem" id="rival-emblem" aria-hidden="true"><span></span></div>
+          </div>
           <div class="rival-quote" id="rival-quote">Your next challenger is waiting in the arena.</div>
         </article>
       </div>
@@ -71,7 +92,6 @@
         <div class="battle-copy"><p class="eyebrow">YOUR MOVE</p><p id="battle-prompt">Start a match to choose an attack.</p></div>
         <button class="primary-button" id="start-battle" type="button">Find an opponent <span aria-hidden="true">→</span></button>
       </div>
-      <div class="moves" id="moves" aria-label="Choose an attack" hidden></div>
       <div class="battle-log" id="battle-log" aria-live="polite"><span class="log-marker" aria-hidden="true">✦</span><p>Choose your shape and element, then jump into the arena. Win battles to earn coins for auras.</p></div>
       <p class="matchup-note">ELEMENTAL EDGE <span>Storm &gt; Water &gt; Fire &gt; Ice &gt; Storm</span> · Advantage deals 1.5× damage; disadvantage deals 0.75×.</p>
     </section>

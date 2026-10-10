@@ -172,6 +172,16 @@ function renderHeader() {
   document.getElementById("losses").textContent = `${state.losses} L`;
 }
 
+function renderMenu() {
+  const stage = playerStage();
+  const element = elementData[state.element];
+  document.getElementById("menu-record").textContent = `${state.wins} W · ${state.losses} L`;
+  document.getElementById("menu-fighter-name").textContent = fighterName(state.shape, state.element, stage);
+  document.getElementById("menu-fighter-element").textContent = `${element.name} · ${["BASE", "EVOLVED", "ASCENDED"][stage]}`;
+  setShapeEmblem(document.getElementById("menu-emblem"), state.shape, element.color);
+  renderStats(document.getElementById("menu-stats"), statsFor(state.shape, stage));
+}
+
 function renderPlayerCard() {
   const stage = playerStage();
   const stats = statsFor(state.shape, stage);
@@ -183,7 +193,6 @@ function renderPlayerCard() {
   document.getElementById("player-hp-label").textContent = `${hp} / ${stats.hp}`;
   document.getElementById("player-hp-bar").style.width = `${Math.max(0, hp / stats.hp * 100)}%`;
   setShapeEmblem(document.getElementById("player-emblem"), state.shape, color);
-  renderStats(document.getElementById("player-stats"), stats);
   const aura = currentAura();
   document.getElementById("equipped-aura").textContent = aura ? `✧ ${aura.name} equipped · +${aura.bonus} ${statLabels[aura.stat]}` : "No aura equipped";
 }
@@ -191,11 +200,13 @@ function renderPlayerCard() {
 function renderBattle() {
   renderPlayerCard();
   const rivalCard = document.getElementById("rival-card");
+  const arena = document.querySelector(".arena");
   const controls = document.getElementById("moves");
   const startButton = document.getElementById("start-battle");
   const prompt = document.getElementById("battle-prompt");
   const stateLabel = document.getElementById("battle-state");
   if (!battle) {
+    arena.dataset.turn = "idle";
     rivalCard.classList.remove("in-match");
     document.getElementById("rival-name").textContent = "No rival yet";
     document.getElementById("rival-element").textContent = "Start a battle to meet your opponent.";
@@ -210,6 +221,7 @@ function renderBattle() {
     prompt.textContent = state.started ? "Start a match to choose an attack." : "Choose your free starter shape and element first.";
     return;
   }
+  arena.dataset.turn = battle.result || battle.turn;
   rivalCard.classList.add("in-match");
   const rival = battle.rival;
   document.getElementById("rival-name").textContent = fighterName(rival.shape, rival.element, rival.stage);
@@ -218,7 +230,9 @@ function renderBattle() {
   document.getElementById("rival-hp-label").textContent = `${battle.rivalHp} / ${rival.stats.hp}`;
   document.getElementById("rival-hp-bar").style.width = `${Math.max(0, battle.rivalHp / rival.stats.hp * 100)}%`;
   setShapeEmblem(document.getElementById("rival-emblem"), rival.shape, elementData[rival.element].color);
-  document.getElementById("rival-quote").textContent = "A challenger from the elemental league.";
+  document.getElementById("rival-quote").textContent = battle.turn === "enemy"
+    ? "Their aura flares... the counterattack is coming."
+    : "The challenger circles, waiting for an opening.";
   if (battle.result) {
     controls.hidden = true;
     startButton.hidden = false;
@@ -229,8 +243,11 @@ function renderBattle() {
   }
   controls.hidden = false;
   startButton.hidden = true;
-  stateLabel.textContent = "YOUR TURN";
-  prompt.textContent = `Choose an attack for ${fighterName(state.shape, state.element, playerStage())}.`;
+  const enemyTurn = battle.turn === "enemy";
+  stateLabel.textContent = enemyTurn ? "RIVAL TURN" : "YOUR TURN";
+  prompt.textContent = enemyTurn
+    ? "The rival is gathering energy. Brace for their counterattack..."
+    : `Choose an attack for ${fighterName(state.shape, state.element, playerStage())}.`;
   renderMoves();
 }
 
@@ -242,6 +259,7 @@ function renderMoves() {
     button.type = "button";
     button.className = `move-button${spell.kind === "physical" ? " physical" : ""}`;
     button.dataset.move = String(index);
+    button.disabled = battle.turn !== "player";
     const info = document.createElement("span");
     const name = document.createElement("span");
     name.className = "move-name";
@@ -411,6 +429,7 @@ function renderAuraShop() {
 
 function renderAll() {
   renderHeader();
+  renderMenu();
   renderBattle();
   renderShapeMenu();
   renderAuraShop();
@@ -458,10 +477,12 @@ function startBattle() {
     return;
   }
   const stats = statsFor(state.shape, playerStage());
-  battle = { rival: chooseRival(), playerHp: stats.hp, rivalHp: 0, result: null };
+  battle = { rival: chooseRival(), playerHp: stats.hp, rivalHp: 0, result: null, turn: "player" };
   battle.rivalHp = battle.rival.stats.hp;
-  setLog(`A ${elementData[battle.rival.element].name} ${shapeData[battle.rival.shape].name} enters the arena. Choose a spell.`);
+  setLog(`The crowd roars as ${fighterName(battle.rival.shape, battle.rival.element, battle.rival.stage)} steps into the arena. Choose your opening attack!`);
+  document.getElementById("menu-feedback").textContent = "";
   renderAll();
+  showScreen("battle");
 }
 
 function affinityMultiplier(attackerElement, defenderElement) {
@@ -478,32 +499,76 @@ function calculateDamage(spell, attackerStats, attackerElement, defenderStats, d
 }
 
 function playerAttack(moveIndex) {
-  if (!battle || battle.result) return;
+  if (!battle || battle.result || battle.turn !== "player") return;
   const move = spells[state.element][moveIndex];
+  if (!move) return;
+  const activeBattle = battle;
   const playerStats = statsFor(state.shape, playerStage());
   const damage = calculateDamage(move, playerStats, state.element, battle.rival.stats, battle.rival.element);
   battle.rivalHp = Math.max(0, battle.rivalHp - damage);
+  animateSpell(move, state.element, "player");
+  animateFighter("player-card", "attacking");
+  animateFighter("rival-card", "taking-hit");
   const matchup = affinityMultiplier(state.element, battle.rival.element);
   const edge = matchup > 1 ? " Elemental advantage!" : matchup < 1 ? " Elemental disadvantage." : "";
   if (battle.rivalHp === 0) {
-    finishBattle("win", `${fighterName(state.shape, state.element, playerStage())} used ${move.name} for ${damage} damage and won!${edge}`);
+    battle.turn = "enemy";
+    setLog(`${fighterName(state.shape, state.element, playerStage())} unleashes ${move.name} for ${damage} damage!${edge} The rival is down!`);
+    renderBattle();
+    window.setTimeout(() => {
+      if (battle !== activeBattle || activeBattle.result || activeBattle.rivalHp !== 0) return;
+      finishBattle("win", `${fighterName(state.shape, state.element, playerStage())} used ${move.name} for ${damage} damage and won!${edge}`);
+    }, 400);
     return;
   }
-  const rivalMove = spells[battle.rival.element][Math.floor(Math.random() * spells[battle.rival.element].length)];
-  const incoming = calculateDamage(rivalMove, battle.rival.stats, battle.rival.element, playerStats, state.element);
-  battle.playerHp = Math.max(0, battle.playerHp - incoming);
-  const rivalAdvantage = affinityMultiplier(battle.rival.element, state.element);
-  const rivalEdge = rivalAdvantage > 1 ? " Their element has the advantage!" : rivalAdvantage < 1 ? " Your element resists the hit." : "";
-  if (battle.playerHp === 0) {
-    finishBattle("loss", `${move.name} dealt ${damage}. The rival answered with ${rivalMove.name} for ${incoming} and won.${rivalEdge}`);
-    return;
-  }
-  setLog(`${move.name} dealt ${damage}.${edge} ${rivalMove.name} hit back for ${incoming}.${rivalEdge}`);
+  battle.turn = "enemy";
+  setLog(`${fighterName(state.shape, state.element, playerStage())} unleashes ${move.name} for ${damage} damage!${edge} The rival steadies themself...`);
   renderBattle();
+
+  window.setTimeout(() => {
+    if (battle !== activeBattle || activeBattle.result || activeBattle.turn !== "enemy") return;
+    const rivalMove = spells[activeBattle.rival.element][Math.floor(Math.random() * spells[activeBattle.rival.element].length)];
+    const incoming = calculateDamage(rivalMove, activeBattle.rival.stats, activeBattle.rival.element, playerStats, state.element);
+    const rivalAdvantage = affinityMultiplier(activeBattle.rival.element, state.element);
+    const rivalEdge = rivalAdvantage > 1 ? " Their element has the advantage!" : rivalAdvantage < 1 ? " Your element resists the hit." : "";
+    setLog(`${fighterName(activeBattle.rival.shape, activeBattle.rival.element, activeBattle.rival.stage)} charges ${rivalMove.name}!`);
+    animateSpell(rivalMove, activeBattle.rival.element, "rival");
+    animateFighter("rival-card", "attacking");
+    animateFighter("player-card", "taking-hit");
+    window.setTimeout(() => {
+      if (battle !== activeBattle || activeBattle.result || activeBattle.turn !== "enemy") return;
+      activeBattle.playerHp = Math.max(0, activeBattle.playerHp - incoming);
+      if (activeBattle.playerHp === 0) {
+        finishBattle("loss", `${rivalMove.name} crashes into your fighter for ${incoming} damage. You have been defeated.${rivalEdge}`);
+        return;
+      }
+      activeBattle.turn = "player";
+      setLog(`${rivalMove.name} crashes in for ${incoming} damage!${rivalEdge} Your fighter regains their footing. Your turn!`);
+      renderBattle();
+    }, 400);
+  }, 2000);
+}
+
+function animateFighter(id, animation) {
+  const fighter = document.getElementById(id);
+  fighter.classList.remove("attacking", "taking-hit");
+  void fighter.offsetWidth;
+  fighter.classList.add(animation);
+}
+
+function animateSpell(move, element, side) {
+  const effect = document.createElement("span");
+  effect.className = `spell-effect ${move.kind} from-${side}`;
+  const core = document.createElement("span");
+  core.className = "spell-core";
+  effect.append(core);
+  effect.dataset.element = element;
+  effect.setAttribute("aria-hidden", "true");
+  document.querySelector(".arena").append(effect);
+  window.setTimeout(() => effect.remove(), 600);
 }
 
 function finishBattle(result, message) {
-  battle.result = result;
   if (result === "win") {
     state.wins += 1;
     state.coins += 25;
@@ -513,7 +578,12 @@ function finishBattle(result, message) {
   }
   setLog(message);
   saveState();
+  battle = null;
   renderAll();
+  showScreen("menu");
+  document.getElementById("menu-feedback").textContent = result === "win"
+    ? "Victory! 25 coins earned. Back at the league hub."
+    : "Defeat. 8 coins earned. Back at the league hub.";
 }
 
 function evolve(nextStage) {
@@ -561,7 +631,7 @@ function lockInStarter() {
   state.ownedShapes = [state.shape];
   state.ownedElements = [state.element];
   saveState();
-  showScreen("battle");
+  showScreen("menu");
   setLog(`Your ${elementData[state.element].name} ${shapeData[state.shape].name} is ready! Win battles to unlock more shapes and elements.`);
   renderAll();
 }
@@ -580,6 +650,10 @@ function buyAura(aura) {
 document.querySelectorAll(".nav-button").forEach(button => {
   button.addEventListener("click", () => showScreen(button.dataset.screen));
 });
+document.querySelectorAll(".menu-link").forEach(button => {
+  button.addEventListener("click", () => showScreen(button.dataset.screen));
+});
+document.getElementById("enter-arena").addEventListener("click", startBattle);
 document.getElementById("start-battle").addEventListener("click", startBattle);
 document.getElementById("lock-starter").addEventListener("click", lockInStarter);
 
@@ -597,4 +671,4 @@ document.getElementById("confirm-reset").addEventListener("click", event => {
 });
 
 renderAll();
-if (!state.started) showScreen("shapes");
+showScreen(state.started ? "menu" : "shapes");
