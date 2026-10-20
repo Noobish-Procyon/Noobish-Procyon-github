@@ -295,7 +295,7 @@ const npcTrades = [
   { npc: 'Vela', title: 'The Astronomer', note: 'Two legendary lights for a mythic one.', give: 'legendary', count: 2, get: 'mythic', color: '#e5b95b' },
   { npc: 'Unit-8', title: 'The Broker', note: 'Mythic energy can be refined into something transcendent.', give: 'mythic', count: 2, get: 'transcendent', color: '#72cfc7' },
   { npc: 'Wayfarer', title: 'Beyond the Veil', note: 'Two transcendent orbs. One impossible prize.', give: 'transcendent', count: 2, get: 'oneOfAKind', color: '#efe0a0' },
-  { npc: 'Midas', title: 'The Gem Broker', note: 'Trade me one unlocked One of a Kind orb for five Mystic Gems.', give: 'oneOfAKind', count: 1, reward: { gems: 5 }, color: '#a9ddff' }
+  { npc: 'Midas', title: 'The Gem Broker', note: 'Trade me two unlocked One of a Kind orb for one Mystic Gem.', give: 'oneOfAKind', count: 2, reward: { gems: 4000000 }, color: '#a9ddff' }
 ];
 
 const stockOdds = {
