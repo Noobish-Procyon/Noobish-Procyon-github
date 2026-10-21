@@ -444,10 +444,10 @@ function applyElementalHit(enemy, damage, elementId, abilityIndex, awakened) {
   if (element.id === 'fire') enemy.burn = Math.max(enemy.burn, (abilityIndex === 3 ? 5 : 2.5) * bonus);
   if (element.id === 'ice') enemy.slow = Math.max(enemy.slow, (abilityIndex === 3 ? 4 : 1.8) * bonus);
   if (element.id === 'nature') enemy.root = Math.max(enemy.root, (abilityIndex === 1 || abilityIndex === 3 ? 2.5 : 1.2) * bonus);
-  if (element.id === 'water') {
+  if (element.id === 'water' && abilityIndex === 0) {
     const angle = Math.atan2(enemy.y - state.player.y, enemy.x - state.player.x);
-    enemy.x += Math.cos(angle) * (abilityIndex === 1 ? 65 : 30) * bonus;
-    enemy.y += Math.sin(angle) * (abilityIndex === 1 ? 65 : 30) * bonus;
+    enemy.x += Math.cos(angle) * 30 * bonus;
+    enemy.y += Math.sin(angle) * 30 * bonus;
   }
   if (element.id === 'light') enemy.mark = Math.max(enemy.mark, (abilityIndex === 3 ? 6 : 3) * bonus);
   if (element.id === 'dark') state.health = Math.min(state.maxHealth, state.health + damage * 0.06 * bonus);
@@ -747,21 +747,30 @@ function useAbility(index) {
       hitArea(55, 48);
     } else if (element.id === 'ice') {
       state.shield = 8;
-      for (const enemy of enemies) if (dist(hero, enemy) < 105) enemy.slow = Math.max(enemy.slow, awakened ? 5 : 3);
+      for (const enemy of enemies) if (dist(hero, enemy) < 105) {
+        enemy.slow = Math.max(enemy.slow, awakened ? 5 : 3);
+        enemy.pause = Math.max(enemy.pause || 0, awakened ? 1.4 : 0.8);
+      }
       burst(hero.x, hero.y, color, 22);
     } else if (element.id === 'nature') {
       state.health = Math.min(state.maxHealth, state.health + (awakened ? 48 : 30));
-      for (const enemy of enemies) if (dist(hero, enemy) < 95) enemy.root = Math.max(enemy.root, 2);
+      for (const enemy of enemies) if (dist(hero, enemy) < 95) {
+        enemy.root = Math.max(enemy.root, awakened ? 4 : 2);
+        applyElementalHit(enemy, damage(awakened ? 32 : 18), element.id, index, awakened);
+      }
       burst(hero.x, hero.y, color, 20);
     } else if (element.id === 'water') {
-      state.health = Math.min(state.maxHealth, state.health + (awakened ? 32 : 18));
+      let pulled = 0;
       for (const enemy of enemies) {
         const distance = dist(hero, enemy) || 1;
-        if (distance < 125) {
-          enemy.x += (enemy.x - hero.x) / distance * 85;
-          enemy.y += (enemy.y - hero.y) / distance * 85;
+        if (distance < (awakened ? 175 : 125)) {
+          enemy.x += (hero.x - enemy.x) / distance * (awakened ? 110 : 80);
+          enemy.y += (hero.y - enemy.y) / distance * (awakened ? 110 : 80);
+          applyElementalHit(enemy, damage(awakened ? 28 : 18), element.id, index, awakened);
+          pulled++;
         }
       }
+      state.health = Math.min(state.maxHealth, state.health + pulled * (awakened ? 5 : 3));
       burst(hero.x, hero.y, color, 20);
     } else if (element.id === 'light') {
       const direction = movementDirection();
@@ -774,9 +783,14 @@ function useAbility(index) {
       state.health = Math.min(state.maxHealth, state.health + (awakened ? 35 : 20));
       burst(hero.x, hero.y, color, 20);
     } else if (element.id === 'poison') {
-      state.health = Math.min(state.maxHealth, state.health + (awakened ? 34 : 22));
-      state.shield = awakened ? 7 : 4;
-      for (const enemy of enemies) if (dist(hero, enemy) < 100) enemy.poison = Math.max(enemy.poison, 5);
+      let toxin = 0;
+      for (const enemy of enemies) {
+        if (dist(hero, enemy) < (awakened ? 190 : 140) && enemy.poison > 0) {
+          toxin += enemy.poison;
+          enemy.poison = 0;
+        }
+      }
+      state.shield = Math.max(state.shield, Math.min(18, (awakened ? 7 : 4) + toxin * 0.45));
       burst(hero.x, hero.y, color, 20);
     } else if (element.id === 'electric') {
       const direction = movementDirection();
@@ -800,8 +814,7 @@ function useAbility(index) {
       state.shield = awakened ? 14 : 9;
       burst(hero.x, hero.y, color, 24);
     } else if (element.id === 'blood') {
-      state.health = Math.min(state.maxHealth, state.health + (awakened ? 45 : 28));
-      state.health = Math.max(1, state.health - 8);
+      state.health = Math.max(1, Math.min(state.maxHealth, state.health + (awakened ? 45 : 28)) - 8);
       burst(hero.x, hero.y, color, 18);
     } else if (element.id === 'time') {
       const rewindTime = state.runTime - 2;
@@ -863,11 +876,11 @@ function useAbility(index) {
         const along = (enemy.x - hero.x) * Math.cos(angle) + (enemy.y - hero.y) * Math.sin(angle);
         const across = Math.abs((enemy.x - hero.x) * Math.sin(angle) - (enemy.y - hero.y) * Math.cos(angle));
         if (along > 0 && along < 270 && across < 34) {
-          applyElementalHit(enemy, damage(90), element.id, index, awakened);
+          const rootBonus = enemy.root > 0 ? 1.6 : 1;
+          applyElementalHit(enemy, damage(awakened ? 120 : 90) * rootBonus, element.id, index, awakened);
           enemy.root = Math.max(enemy.root, awakened ? 9 : 6);
         }
       }
-      state.health = Math.min(state.maxHealth, state.health + (awakened ? 28 : 16));
       burst(hero.x + direction.x * 120, hero.y + direction.y * 120, color, 24);
     } else if (element.id === 'water') {
       const direction = movementDirection();
@@ -916,11 +929,14 @@ function useAbility(index) {
       }
       burst(center.x, center.y, color, 34);
     } else if (element.id === 'electric') {
-      const pending = enemies.slice().sort((a, b) => dist(hero, a) - dist(hero, b)).slice(0, awakened ? 8 : 5);
-      for (const enemy of pending) {
-        applyElementalHit(enemy, damage(awakened ? 105 : 72), element.id, index, awakened);
-        enemy.stun = Math.max(enemy.stun || 0, awakened ? 1.2 : 0.6);
-        burst(enemy.x, enemy.y, color, 10);
+      const center = target || hero;
+      const radius = awakened ? 185 : 135;
+      for (const enemy of enemies) {
+        if (dist(center, enemy) < radius) {
+          applyElementalHit(enemy, damage(awakened ? 112 : 78), element.id, index, awakened);
+          enemy.stun = Math.max(enemy.stun || 0, awakened ? 1.8 : 1);
+          burst(enemy.x, enemy.y, color, 10);
+        }
       }
     } else if (element.id === 'crystal') {
       for (let i = 0; i < 16; i++) {
