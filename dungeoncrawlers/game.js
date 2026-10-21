@@ -20,6 +20,7 @@ const elements = [
 const moveKeys = ['z', 'x', 'c', 'v'];
 const rooms = ['THE SUNKEN VESTIBULE', 'MOSS LANTERN HALL', 'THE CLOCKWORK CRYPT', 'THE RED GALLERY', 'THE LAST THRESHOLD'];
 const defaultProfile = { fragments: 0, unlocked: [], awakened: [], moves: {} };
+const runSaveKey = 'circlebound-elemental-run';
 let profile = loadProfile();
 let state;
 let controlsChosen = false;
@@ -67,23 +68,99 @@ function elementName(element) {
   return element && profile.awakened.includes(element.id) ? element.awakenedName : element ? element.name : 'NONE';
 }
 
-function resetRun() {
+function loadRunSave() {
+  const raw = localStorage.getItem(runSaveKey);
+  if (!raw) return null;
+  let saved;
+  try {
+    saved = JSON.parse(raw);
+  } catch (error) {
+    if (!(error instanceof SyntaxError)) throw error;
+    console.warn('Saved dungeon run was unreadable; starting a new run.');
+    return null;
+  }
+  const validEntityTypes = new Set(['enemy', 'miniboss', 'awakenedBoss', 'fragment']);
+  const validNumber = value => Number.isFinite(value) && value >= 0;
+  if (!saved || !Number.isInteger(saved.room) || saved.room < 1 || saved.room > 1000000 ||
+      !validNumber(saved.health) || !validNumber(saved.maxHealth) || !Number.isFinite(saved.score) ||
+      !Array.isArray(saved.entities) || saved.entities.length > 100 ||
+      !saved.entities.every(entity => entity && validEntityTypes.has(entity.type) && Number.isFinite(entity.x) &&
+        Number.isFinite(entity.y) && validNumber(entity.r) && (entity.type === 'fragment'
+          ? validNumber(entity.value)
+          : validNumber(entity.hp) && validNumber(entity.maxHp) && validNumber(entity.speed)))) {
+    console.warn('Saved dungeon run was invalid; starting a new run.');
+    return null;
+  }
+  return saved;
+}
+
+function saveRun() {
+  if (!state || state.health <= 0) return;
+  const saved = {
+    room: state.room,
+    health: state.health,
+    maxHealth: state.maxHealth,
+    score: state.score,
+    player: { x: state.player.x, y: state.player.y },
+    entities: state.entities.filter(entity => !entity.dead).map(entity => ({
+      type: entity.type, x: entity.x, y: entity.y, r: entity.r, hp: entity.hp, maxHp: entity.maxHp,
+      speed: entity.speed, hit: entity.hit, fireTimer: entity.fireTimer, burn: entity.burn,
+      poison: entity.poison, slow: entity.slow, root: entity.root, mark: entity.mark,
+      stun: entity.stun, glitch: entity.glitch, pause: entity.pause, spin: entity.spin, value: entity.value
+    })),
+    upgrades: {
+      damageBoost: state.damageBoost, fireBoost: state.fireBoost, attackSpeed: state.attackSpeed,
+      moveSpeed: state.moveSpeed, dashCooldown: state.dashCooldown, meleeRange: state.meleeRange,
+      fragmentBonus: state.fragmentBonus
+    },
+    shield: state.shield,
+    roomCleared: state.roomCleared,
+    gateOpen: state.gateOpen,
+    bossElement: state.bossElement
+  };
+  localStorage.setItem(runSaveKey, JSON.stringify(saved));
+}
+
+function resetRun(resumeSavedRun = false) {
+  const savedRun = resumeSavedRun ? loadRunSave() : null;
+  if (!resumeSavedRun) localStorage.removeItem(runSaveKey);
   document.getElementById('run-state').textContent = 'RUN IN PROGRESS';
   state = {
-    room: 1, health: 100, maxHealth: 100, score: 0, combo: 0, comboTimer: 0,
-    lastTime: 0, runTime: 0, historySampleTimer: 0, playerHistory: [], rangedTimer: 0, meleeTimer: 0, dashTimer: 0, abilityTimers: [0, 0, 0, 0],
-    shake: 0, roomCleared: false, gateOpen: false, damageBoost: 1, fireBoost: 1, attackSpeed: 1,
-    moveSpeed: 180, dashCooldown: 0.8, meleeRange: 80, fragmentBonus: 0, shield: 0,
+    room: savedRun ? savedRun.room : 1, health: savedRun?.health ?? 100, maxHealth: savedRun?.maxHealth ?? 100,
+    score: savedRun?.score ?? 0, combo: 0, comboTimer: 0,
+    lastTime: 0, runTime: 0, historySampleTimer: 0, playerHistory: [], autosaveTimer: 0, rangedTimer: 0, meleeTimer: 0, dashTimer: 0, abilityTimers: [0, 0, 0, 0],
+    shake: 0, roomCleared: false, gateOpen: false,
+    damageBoost: savedRun?.upgrades?.damageBoost ?? 1, fireBoost: savedRun?.upgrades?.fireBoost ?? 1,
+    attackSpeed: savedRun?.upgrades?.attackSpeed ?? 1, moveSpeed: savedRun?.upgrades?.moveSpeed ?? 180,
+    dashCooldown: savedRun?.upgrades?.dashCooldown ?? 0.8, meleeRange: savedRun?.upgrades?.meleeRange ?? 80,
+    fragmentBonus: savedRun?.upgrades?.fragmentBonus ?? 0, shield: savedRun?.shield ?? 0,
     bossElement: null, entities: [], shots: [], enemyShots: [], particles: [], decorations: [], orbitingBlades: [], abilityEffects: [],
     player: { x: 0, y: 0, r: 14 }, keys: new Set()
   };
   keys.clear();
   resize();
   generateRoom();
+  document.getElementById('upgrade-modal').classList.add('hidden');
+  if (savedRun) {
+    if (savedRun.player && Number.isFinite(savedRun.player.x) && Number.isFinite(savedRun.player.y)) {
+      state.player.x = Math.max(25, Math.min(size().w - 25, savedRun.player.x));
+      state.player.y = Math.max(25, Math.min(size().h - 25, savedRun.player.y));
+    }
+    state.entities = savedRun.entities;
+    state.roomCleared = Boolean(savedRun.roomCleared);
+    state.gateOpen = Boolean(savedRun.gateOpen);
+    if (typeof savedRun.bossElement === 'string') state.bossElement = getElement(savedRun.bossElement)?.id || null;
+    if (state.gateOpen) document.getElementById('wave-status').textContent = 'GATE OPEN';
+    else if (state.roomCleared) {
+      document.getElementById('wave-status').textContent = 'ROOM CLEARED';
+      document.getElementById('upgrade-modal').classList.remove('hidden');
+    }
+  }
   updateHud();
   renderElementShop();
   renderAbilities();
   document.getElementById('end-modal').classList.add('hidden');
+  saveRun();
 }
 
 function resize() {
@@ -180,6 +257,7 @@ function update(dt) {
   state.meleeTimer = Math.max(0, state.meleeTimer - dt);
   state.dashTimer = Math.max(0, state.dashTimer - dt);
   state.abilityTimers = state.abilityTimers.map(timer => Math.max(0, timer - dt));
+  state.autosaveTimer += dt;
   for (const effect of state.abilityEffects) effect.life -= dt;
   state.abilityEffects = state.abilityEffects.filter(effect => effect.life > 0);
   state.shield = Math.max(0, state.shield - dt);
@@ -296,6 +374,11 @@ function update(dt) {
     state.room++;
     generateRoom();
     updateHud();
+    saveRun();
+  }
+  if (state.autosaveTimer >= 1) {
+    state.autosaveTimer %= 1;
+    saveRun();
   }
   updateHud();
   for (const particle of state.particles) {
@@ -1193,6 +1276,7 @@ function addLog(label, message) {
 }
 
 function endRun() {
+  localStorage.removeItem(runSaveKey);
   document.getElementById('run-state').textContent = 'RUN ENDED';
   document.getElementById('end-title').textContent = 'THE CIRCLE FADES';
   document.getElementById('end-copy').textContent = `You reached room ${state.room} with ${profile.fragments} fragments.`;
@@ -1356,11 +1440,13 @@ document.querySelectorAll('.upgrade-choice').forEach(button => button.addEventLi
   document.getElementById('wave-status').textContent = 'GATE OPEN';
   addLog('UPGRADE', `${button.querySelector('strong').textContent} acquired.`);
   updateHud();
+  saveRun();
 }));
 document.getElementById('restart-button').addEventListener('click', () => {
   document.getElementById('run-state').textContent = 'RUN IN PROGRESS';
   resetRun();
 });
+window.addEventListener('pagehide', saveRun);
 profile.equipped = profile.unlocked.includes(profile.equipped) ? profile.equipped : null;
-resetRun();
+resetRun(true);
 requestAnimationFrame(loop);
