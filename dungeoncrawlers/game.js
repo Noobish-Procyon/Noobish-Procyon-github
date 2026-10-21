@@ -106,7 +106,8 @@ function saveRun() {
       type: entity.type, x: entity.x, y: entity.y, r: entity.r, hp: entity.hp, maxHp: entity.maxHp,
       speed: entity.speed, hit: entity.hit, fireTimer: entity.fireTimer, burn: entity.burn,
       poison: entity.poison, slow: entity.slow, root: entity.root, mark: entity.mark,
-      stun: entity.stun, glitch: entity.glitch, pause: entity.pause, spin: entity.spin, value: entity.value
+      stun: entity.stun, glitch: entity.glitch, pause: entity.pause, spin: entity.spin, value: entity.value,
+      elementId: entity.elementId
     })),
     upgrades: {
       damageBoost: state.damageBoost, fireBoost: state.fireBoost, attackSpeed: state.attackSpeed,
@@ -114,6 +115,8 @@ function saveRun() {
       fragmentBonus: state.fragmentBonus
     },
     shield: state.shield,
+    playerSlow: state.playerSlow, playerRoot: state.playerRoot, playerStun: state.playerStun,
+    playerPoison: state.playerPoison, playerGlitch: state.playerGlitch,
     roomCleared: state.roomCleared,
     gateOpen: state.gateOpen,
     bossElement: state.bossElement
@@ -133,23 +136,29 @@ function resetRun(resumeSavedRun = false) {
     damageBoost: savedRun?.upgrades?.damageBoost ?? 1, fireBoost: savedRun?.upgrades?.fireBoost ?? 1,
     attackSpeed: savedRun?.upgrades?.attackSpeed ?? 1, moveSpeed: savedRun?.upgrades?.moveSpeed ?? 180,
     dashCooldown: savedRun?.upgrades?.dashCooldown ?? 0.8, meleeRange: savedRun?.upgrades?.meleeRange ?? 80,
-    fragmentBonus: savedRun?.upgrades?.fragmentBonus ?? 0, shield: savedRun?.shield ?? 0,
-    bossElement: null, entities: [], shots: [], enemyShots: [], particles: [], decorations: [], orbitingBlades: [], abilityEffects: [],
+    fragmentBonus: savedRun?.upgrades?.fragmentBonus ?? 0, shield: savedRun?.shield ?? 0, reflectTimer: 0,
+    playerSlow: savedRun?.playerSlow ?? 0, playerRoot: savedRun?.playerRoot ?? 0,
+    playerStun: savedRun?.playerStun ?? 0, playerPoison: savedRun?.playerPoison ?? 0,
+    playerGlitch: savedRun?.playerGlitch ?? 0,
+    bossElement: savedRun?.bossElement ? getElement(savedRun.bossElement)?.id || null : null,
+    entities: [], shots: [], enemyShots: [], particles: [], decorations: [], orbitingBlades: [], abilityEffects: [],
     player: { x: 0, y: 0, r: 14 }, keys: new Set()
   };
   keys.clear();
   resize();
-  generateRoom();
+  const savedBossElement = savedRun?.entities.find(entity => entity.type === 'awakenedBoss')?.elementId;
+  generateRoom(Boolean(savedRun), savedBossElement);
   document.getElementById('upgrade-modal').classList.add('hidden');
   if (savedRun) {
     if (savedRun.player && Number.isFinite(savedRun.player.x) && Number.isFinite(savedRun.player.y)) {
       state.player.x = Math.max(25, Math.min(size().w - 25, savedRun.player.x));
       state.player.y = Math.max(25, Math.min(size().h - 25, savedRun.player.y));
     }
-    state.entities = savedRun.entities;
+    state.entities = savedRun.entities.map(entity => entity.type === 'awakenedBoss' && !entity.elementId
+      ? { ...entity, elementId: state.bossElement || getAwakenedBossElementForRoom(state.room).id }
+      : entity);
     state.roomCleared = Boolean(savedRun.roomCleared);
     state.gateOpen = Boolean(savedRun.gateOpen);
-    if (typeof savedRun.bossElement === 'string') state.bossElement = getElement(savedRun.bossElement)?.id || null;
     if (state.gateOpen) document.getElementById('wave-status').textContent = 'GATE OPEN';
     else if (state.roomCleared) {
       document.getElementById('wave-status').textContent = 'ROOM CLEARED';
@@ -174,7 +183,7 @@ function size() {
   return { w: canvas.clientWidth, h: canvas.clientHeight };
 }
 
-function generateRoom() {
+function generateRoom(preserveBossElement = false, bossElementId = null) {
   const { w, h } = size();
   state.player = { x: w / 2, y: h / 2, r: 14 };
   state.playerHistory = [{ x: state.player.x, y: state.player.y, time: state.runTime }];
@@ -189,11 +198,15 @@ function generateRoom() {
   state.gateOpen = false;
   state.combo = 0;
   state.comboTimer = 0;
-  state.bossElement = state.room % 10 === 0 && getElement() && getElement().moves ? getElement().id : null;
+  if (!preserveBossElement) state.bossElement = state.room % 10 === 0 && getElement()?.moves ? getElement().id : null;
+  const bossElement = getElement(bossElementId || state.bossElement) || getAwakenedBossElementForRoom(state.room);
   const count = 3 + Math.min(5, state.room + 1);
   for (let i = 0; i < count; i++) state.entities.push(makeEnemy('enemy'));
-  if (state.room % 10 === 0) state.entities.push(makeEnemy('awakenedBoss'));
-  else if (state.room % 5 === 0) state.entities.push(makeEnemy('miniboss'));
+  if (state.room % 10 === 0) {
+    const boss = makeEnemy('awakenedBoss');
+    boss.elementId = bossElement.id;
+    state.entities.push(boss);
+  } else if (state.room % 5 === 0) state.entities.push(makeEnemy('miniboss'));
   for (let i = 0; i < 8; i++) state.decorations.push({ x: 45 + Math.random() * (w - 90), y: 45 + Math.random() * (h - 90), r: 8 + Math.random() * 18, phase: Math.random() * Math.PI * 2 });
   document.getElementById('room-name').textContent = rooms[(state.room - 1) % rooms.length];
   const isAwakenedBoss = state.room % 10 === 0;
@@ -201,11 +214,16 @@ function generateRoom() {
   const status = isAwakenedBoss ? 'AWAKENED BOSS' : isMiniboss ? 'MINIBOSS' : 'CLEAR THE ROOM';
   document.getElementById('wave-status').textContent = status;
   addLog(`ROOM ${String(state.room).padStart(2, '0')}`, isAwakenedBoss ? 'An awakened boss guards this depth.' : isMiniboss ? 'A miniboss blocks the way.' : 'New walls, new trouble.');
-  if (isAwakenedBoss && state.bossElement) addLog('BOSS TRIAL', `${getElement(state.bossElement).name} is tested here.`);
+  if (isAwakenedBoss && bossElement) addLog('BOSS TRIAL', `The boss wields awakened ${bossElement.awakenedName}.`);
   if (isAwakenedBoss) {
     state.shake = 0.35;
     burst(w / 2, h / 2, colors.boss, 18);
   }
+}
+
+function getAwakenedBossElementForRoom(room) {
+  const awakenedElements = elements.filter(element => element.moves);
+  return awakenedElements[(Math.floor(room / 10) - 1) % awakenedElements.length];
 }
 
 const colors = { field: '#11131b', wall: '#353340', wallLight: '#62586c', enemy: '#d9774d', boss: '#bf5262', loot: '#b78aff', shot: '#f2dfb2', text: '#e5d9c3' };
@@ -223,8 +241,43 @@ function makeEnemy(type) {
   return {
     type, x, y, r: type === 'awakenedBoss' ? 37 : type === 'miniboss' ? 27 : 11 + Math.random() * 4,
     hp, maxHp: hp, speed: type === 'awakenedBoss' ? 34 : type === 'miniboss' ? 27 : (38 + Math.random() * 20) * 1.15,
+    elementId: type === 'awakenedBoss' ? (state.bossElement || getAwakenedBossElementForRoom(state.room).id) : null,
     hit: 0, fireTimer: isBoss ? 1 + Math.random() : 0, burn: 0, poison: 0, slow: 0, root: 0, mark: 0, glitch: 0, pause: 0
   };
+}
+
+function fireAwakenedBossAttack(boss, angle) {
+  const element = getElement(boss.elementId);
+  if (!element?.moves) return;
+  const shoot = (offset, speed, radius, damage, options = {}) => {
+    state.enemyShots.push({
+      x: boss.x, y: boss.y, vx: Math.cos(angle + offset) * speed, vy: Math.sin(angle + offset) * speed,
+      r: radius, damage, life: 4, telegraph: 0.3, color: element.color, elementId: element.id, ...options
+    });
+  };
+  if (element.id === 'fire') {
+    for (const offset of [-0.22, 0, 0.22]) shoot(offset, 185, 9, 14, { splash: 7 });
+  } else if (element.id === 'ice') {
+    for (const offset of [-0.48, -0.24, 0, 0.24, 0.48]) shoot(offset, 175, 6, 9, { slow: 1.4 });
+  } else if (element.id === 'nature') {
+    for (const offset of [-0.3, 0, 0.3]) shoot(offset, 240, 5, 11, { root: 0.7 });
+  } else if (element.id === 'water') {
+    for (const offset of [-0.62, -0.31, 0, 0.31, 0.62]) shoot(offset, 155, 8, 8, { knockback: 44 });
+  } else if (element.id === 'light') {
+    shoot(0, 420, 5, 18, { pierce: true });
+  } else if (element.id === 'dark') {
+    shoot(0, 115, 12, 22, { homing: true, healBoss: 0.35 });
+  } else if (element.id === 'poison') {
+    for (const offset of [-0.24, 0, 0.24]) shoot(offset, 165, 7, 8, { poison: 2 });
+  } else if (element.id === 'electric') {
+    shoot(-0.06, 350, 5, 12, { stun: 0.35 });
+    shoot(0.06, 350, 5, 12, { stun: 0.35 });
+  } else if (element.id === 'crystal') {
+    for (let i = 0; i < 8; i++) shoot(i * Math.PI / 4 - angle, 195, 6, 9, { pierce: true });
+  } else if (element.id === 'metal') {
+    shoot(-0.08, 290, 8, 16, { pierce: true });
+    shoot(0.08, 290, 8, 16, { pierce: true });
+  }
 }
 
 function update(dt) {
@@ -232,6 +285,12 @@ function update(dt) {
   const { w, h } = size();
   const hero = state.player;
   state.runTime += dt;
+  state.playerSlow = Math.max(0, state.playerSlow - dt);
+  state.playerRoot = Math.max(0, state.playerRoot - dt);
+  state.playerStun = Math.max(0, state.playerStun - dt);
+  state.playerPoison = Math.max(0, state.playerPoison - dt);
+  state.playerGlitch = Math.max(0, state.playerGlitch - dt);
+  if (state.playerPoison > 0) state.health -= 7 * dt;
   let dx = 0;
   let dy = 0;
   if (state.keys.has('w') || state.keys.has('arrowup')) dy--;
@@ -240,10 +299,18 @@ function update(dt) {
   if (state.keys.has('d') || state.keys.has('arrowright')) dx++;
   dx += joystick.x;
   dy += joystick.y;
+  if (state.playerStun > 0 || state.playerRoot > 0) {
+    dx = 0;
+    dy = 0;
+  } else if (state.playerGlitch > 0) {
+    dx *= -1;
+    dy *= -1;
+  }
   if (dx || dy) {
     const length = Math.hypot(dx, dy);
-    hero.x += dx / length * state.moveSpeed * dt;
-    hero.y += dy / length * state.moveSpeed * dt;
+    const speedScale = state.playerSlow > 0 ? 0.5 : 1;
+    hero.x += dx / length * state.moveSpeed * speedScale * dt;
+    hero.y += dy / length * state.moveSpeed * speedScale * dt;
   }
   hero.x = Math.max(25, Math.min(w - 25, hero.x));
   hero.y = Math.max(25, Math.min(h - 25, hero.y));
@@ -258,6 +325,7 @@ function update(dt) {
   state.dashTimer = Math.max(0, state.dashTimer - dt);
   state.abilityTimers = state.abilityTimers.map(timer => Math.max(0, timer - dt));
   state.autosaveTimer += dt;
+  state.reflectTimer = Math.max(0, state.reflectTimer - dt);
   for (const effect of state.abilityEffects) effect.life -= dt;
   state.abilityEffects = state.abilityEffects.filter(effect => effect.life > 0);
   state.shield = Math.max(0, state.shield - dt);
@@ -300,11 +368,12 @@ function update(dt) {
       enemy.fireTimer -= dt * (enemy.slow > 0 ? 0.5 : 1) * (enemy.stun > 0 ? 0 : 1);
       if (enemy.fireTimer <= 0) {
         const aimAngle = Math.atan2(hero.y - enemy.y, hero.x - enemy.x);
-        const spread = enemy.type === 'awakenedBoss' ? [-0.22, 0, 0.22] : [0];
-        for (const offset of spread) {
-          state.enemyShots.push({ x: enemy.x, y: enemy.y, vx: Math.cos(aimAngle + offset) * 155, vy: Math.sin(aimAngle + offset) * 155, r: 7, life: 4, telegraph: 0.4 });
+        if (enemy.type === 'awakenedBoss') {
+          fireAwakenedBossAttack(enemy, aimAngle);
+        } else {
+          state.enemyShots.push({ x: enemy.x, y: enemy.y, vx: Math.cos(aimAngle) * 155, vy: Math.sin(aimAngle) * 155, r: 7, life: 4, telegraph: 0.4 });
         }
-        enemy.fireTimer = enemy.type === 'awakenedBoss' ? 0.9 : 1.3;
+        enemy.fireTimer = enemy.type === 'awakenedBoss' ? 1.15 : 1.3;
       }
     }
     if (dist(hero, enemy) < hero.r + enemy.r && enemy.hit === 0) {
@@ -336,7 +405,23 @@ function update(dt) {
     shot.y += shot.vy * dt;
     for (const enemy of state.entities) {
       if (enemy.type !== 'fragment' && !enemy.dead && !(shot.hitTargets || []).includes(enemy) && dist(shot, enemy) < shot.r + enemy.r) {
+        if (shot.healthCost) state.health = Math.max(1, state.health - shot.healthCost);
+        if (shot.style === 'dark') {
+          const distance = dist(enemy, state.player) || 1;
+          enemy.x += (state.player.x - enemy.x) / distance * 44;
+          enemy.y += (state.player.y - enemy.y) / distance * 44;
+        }
         applyElementalHit(enemy, shot.damage, shot.elementId, shot.abilityIndex, shot.awakened);
+        if (shot.style === 'fire') {
+          for (const nearby of state.entities) {
+            if (nearby !== enemy && nearby.type !== 'fragment' && !nearby.dead && dist(enemy, nearby) < 48) {
+              applyElementalHit(nearby, shot.splashDamage, shot.elementId, shot.abilityIndex, shot.awakened);
+              burst(nearby.x, nearby.y, shot.color, 4);
+            }
+          }
+        }
+        if (shot.style === 'electric') chainLightning(enemy, shot.chainDamage, 2);
+        if (shot.style === 'time') enemy.pause = Math.max(enemy.pause || 0, 1.1);
         shot.hitTargets = shot.hitTargets || [];
         shot.hitTargets.push(enemy);
         if (shot.pierce > 0) shot.pierce--;
@@ -347,17 +432,56 @@ function update(dt) {
     }
   }
   for (const shot of state.enemyShots) {
+    if (shot.homing) {
+      const speed = Math.hypot(shot.vx, shot.vy);
+      const angle = Math.atan2(hero.y - shot.y, hero.x - shot.x);
+      shot.vx += (Math.cos(angle) * speed - shot.vx) * dt * 1.4;
+      shot.vy += (Math.sin(angle) * speed - shot.vy) * dt * 1.4;
+    }
     shot.x += shot.vx * dt;
     shot.y += shot.vy * dt;
     shot.life -= dt;
     shot.telegraph = Math.max(0, (shot.telegraph || 0) - dt);
-    if (dist(hero, shot) < hero.r + shot.r) {
-      shot.dead = true;
-      takeDamage(12);
-      state.combo = 0;
-      state.comboTimer = 0;
-      state.shake = 0.18;
-      burst(hero.x, hero.y, colors.boss, 6);
+    if (!shot.hitPlayer && dist(hero, shot) < hero.r + shot.r) {
+      shot.hitPlayer = true;
+      if (!shot.pierce) shot.dead = true;
+      if (state.reflectTimer > 0) {
+        const target = nearestEnemy();
+        if (target) {
+          const angle = Math.atan2(target.y - shot.y, target.x - shot.x);
+          state.shots.push({
+            x: shot.x, y: shot.y, vx: Math.cos(angle) * 500, vy: Math.sin(angle) * 500,
+            r: 7, damage: 36 * state.damageBoost, color: getElement('crystal').color,
+            elementId: 'crystal', abilityIndex: 2, awakened: profile.awakened.includes('crystal') && Boolean(profile.moves.crystal?.[2])
+          });
+        }
+        burst(hero.x, hero.y, getElement('crystal').color, 8);
+      } else {
+        takeDamage(shot.damage || 12);
+        if (shot.elementId === 'water' && shot.knockback) {
+          const angle = Math.atan2(shot.vy, shot.vx);
+          hero.x = Math.max(25, Math.min(w - 25, hero.x + Math.cos(angle) * shot.knockback));
+          hero.y = Math.max(25, Math.min(h - 25, hero.y + Math.sin(angle) * shot.knockback));
+        }
+        if (shot.elementId === 'fire' && shot.splash) {
+          takeDamage(shot.splash);
+          state.shake = Math.max(state.shake, 0.12);
+        }
+        if (shot.elementId === 'dark' && shot.healBoss) {
+          const boss = state.entities.find(entity => entity.type === 'awakenedBoss' && !entity.dead);
+          if (boss) boss.hp = Math.min(boss.maxHp, boss.hp + shot.damage * shot.healBoss);
+        }
+        if (shot.elementId === 'poison') state.playerPoison = Math.max(state.playerPoison || 0, shot.poison || 0);
+        if (shot.elementId === 'ice') state.playerSlow = Math.max(state.playerSlow || 0, shot.slow || 0);
+        if (shot.elementId === 'nature') state.playerRoot = Math.max(state.playerRoot || 0, shot.root || 0);
+        if (shot.elementId === 'electric') state.playerStun = Math.max(state.playerStun || 0, shot.stun || 0);
+        if (shot.elementId === 'time') state.playerSlow = Math.max(state.playerSlow || 0, 1.2);
+        if (shot.elementId === 'digital') state.playerGlitch = Math.max(state.playerGlitch || 0, 1.4);
+        state.combo = 0;
+        state.comboTimer = 0;
+        state.shake = 0.18;
+        burst(hero.x, hero.y, colors.boss, 6);
+      }
     }
   }
   state.shots = state.shots.filter(shot => !shot.dead && shot.x > -20 && shot.x < w + 20 && shot.y > -20 && shot.y < h + 20);
@@ -490,17 +614,60 @@ function burst(x, y, color, count) {
 
 function rangedAttack() {
   if (!controlsChosen || state.health <= 0 || state.rangedTimer > 0) return;
+  if (state.playerStun > 0) return;
   const enemies = state.entities.filter(entity => entity.type !== 'fragment' && !entity.dead);
   if (!enemies.length) return;
   const target = enemies.reduce((nearest, enemy) => dist(state.player, enemy) < dist(state.player, nearest) ? enemy : nearest);
   const angle = Math.atan2(target.y - state.player.y, target.x - state.player.x);
   const element = getElement();
-  state.shots.push({ x: state.player.x, y: state.player.y, vx: Math.cos(angle) * 440, vy: Math.sin(angle) * 440, r: 4, damage: 20 * state.damageBoost, color: element ? element.color : colors.shot, elementId: element ? element.id : null, abilityIndex: -1 });
-  state.rangedTimer = 0.24 * state.fireBoost;
+  const origin = state.player;
+  const boost = state.damageBoost;
+  const makeShot = (offset, speed, radius, damage, style, pierce = 0, extras = {}) => {
+    state.shots.push({
+      x: origin.x, y: origin.y, vx: Math.cos(angle + offset) * speed, vy: Math.sin(angle + offset) * speed,
+      r: radius, damage: damage * boost, color: element ? element.color : colors.shot,
+      elementId: element?.id || null, abilityIndex: -1, style, pierce, ...extras
+    });
+  };
+  if (!element) {
+    makeShot(0, 440, 4, 20, 'plain');
+  } else if (element.id === 'fire') {
+    makeShot(0, 370, 8, 27, 'fire', 0, { splashDamage: 12 * boost });
+  } else if (element.id === 'ice') {
+    makeShot(0, 310, 10, 24, 'ice');
+  } else if (element.id === 'nature') {
+    makeShot(0, 340, 7, 22, 'nature', 1);
+  } else if (element.id === 'water') {
+    for (const offset of [-0.16, 0, 0.16]) makeShot(offset, 500, 4, 12, 'water', 1);
+  } else if (element.id === 'light') {
+    for (const offset of [-0.045, 0.045]) makeShot(offset, 760, 3, 14, 'light', 2);
+  } else if (element.id === 'dark') {
+    makeShot(0, 260, 12, 31, 'dark');
+  } else if (element.id === 'poison') {
+    for (const offset of [-0.2, 0, 0.2]) makeShot(offset, 430, 5, 13, 'poison');
+  } else if (element.id === 'electric') {
+    makeShot(0, 620, 6, 20, 'electric', 0, { chainDamage: 11 * boost });
+  } else if (element.id === 'crystal') {
+    for (const offset of [-0.32, -0.16, 0, 0.16, 0.32]) makeShot(offset, 560, 5, 11, 'crystal', 2);
+  } else if (element.id === 'metal') {
+    makeShot(0, 530, 10, 33, 'metal', 4);
+  } else if (element.id === 'blood') {
+    makeShot(0, 370, 7, 24, 'blood', 0, { healthCost: 2 });
+  } else if (element.id === 'time') {
+    makeShot(0, 370, 6, 18, 'time');
+  } else if (element.id === 'digital') {
+    for (const enemy of enemies) {
+      const along = (enemy.x - origin.x) * Math.cos(angle) + (enemy.y - origin.y) * Math.sin(angle);
+      const across = Math.abs((enemy.x - origin.x) * Math.sin(angle) - (enemy.y - origin.y) * Math.cos(angle));
+      if (along > 0 && across < enemy.r + 9) applyElementalHit(enemy, 21 * boost, element.id, -1, false);
+    }
+    burst(target.x, target.y, element.color, 8);
+  }
+  state.rangedTimer = (element?.id === 'light' ? 0.16 : element?.id === 'dark' || element?.id === 'metal' ? 0.34 : 0.24) * state.fireBoost;
 }
 
 function meleeAttack(event) {
-  if (!controlsChosen || state.health <= 0 || state.meleeTimer > 0) return;
+  if (!controlsChosen || state.health <= 0 || state.playerStun > 0 || state.meleeTimer > 0) return;
   if (event) {
     const rect = canvas.getBoundingClientRect();
     aim.x = event.clientX - rect.left;
@@ -532,7 +699,7 @@ function meleeAttack(event) {
 
 function useAbility(index) {
   const element = getElement();
-  if (!controlsChosen || state.health <= 0 || !element || state.abilityTimers[index] > 0) return;
+  if (!controlsChosen || state.health <= 0 || state.playerStun > 0 || !element || state.abilityTimers[index] > 0) return;
   if (index < 0 || index > 3) return;
   const awakened = Boolean(element.moves && profile.awakened.includes(element.id) && profile.moves[element.id]?.[index]);
   const hero = state.player;
@@ -630,7 +797,15 @@ function useAbility(index) {
       burst(center.x, center.y, color, 22);
     } else if (element.id === 'fire') {
       const center = target || hero;
-      for (const enemy of enemies) if (dist(center, enemy) < (awakened ? 105 : 72)) applyElementalHit(enemy, damage(62), element.id, index, awakened);
+      for (const enemy of enemies) if (dist(center, enemy) < (awakened ? 105 : 72)) {
+        const storedBurn = enemy.burn;
+        if (storedBurn > 0) {
+          enemy.burn = 0;
+          damageEnemy(enemy, damage(awakened ? 72 : 42) + storedBurn * (awakened ? 12 : 8));
+        } else {
+          applyElementalHit(enemy, damage(62), element.id, index, awakened);
+        }
+      }
       burst(center.x, center.y, color, awakened ? 26 : 17);
     } else if (element.id === 'ice') {
       if (awakened) {
@@ -811,8 +986,9 @@ function useAbility(index) {
       burst(start.x, start.y, color, 8);
       burst(hero.x, hero.y, color, 20);
     } else if (element.id === 'crystal') {
-      state.shield = awakened ? 14 : 9;
-      burst(hero.x, hero.y, color, 24);
+      state.shield = Math.max(state.shield, awakened ? 18 : 12);
+      state.reflectTimer = Math.max(state.reflectTimer, awakened ? 14 : 9);
+      burst(hero.x, hero.y, color, awakened ? 32 : 24);
     } else if (element.id === 'blood') {
       state.health = Math.max(1, Math.min(state.maxHealth, state.health + (awakened ? 45 : 28)) - 8);
       burst(hero.x, hero.y, color, 18);
@@ -1228,14 +1404,14 @@ function draw() {
     context.restore();
   }
   for (const shot of state.enemyShots) {
-    context.strokeStyle = 'rgba(191,82,98,.38)';
+    context.strokeStyle = shot.color || 'rgba(191,82,98,.38)';
     context.lineWidth = 5;
     context.beginPath();
     context.moveTo(shot.x - shot.vx * 0.06, shot.y - shot.vy * 0.06);
     context.lineTo(shot.x, shot.y);
     context.stroke();
-    context.fillStyle = colors.boss;
-    context.strokeStyle = '#edb394';
+    context.fillStyle = shot.color || colors.boss;
+    context.strokeStyle = shot.color || '#edb394';
     context.lineWidth = 2;
     context.beginPath();
     context.arc(shot.x, shot.y, shot.r, 0, Math.PI * 2);
@@ -1265,21 +1441,22 @@ function draw() {
       continue;
     }
     const boss = isBoss(entity);
-    context.fillStyle = boss ? colors.boss : colors.enemy;
+    const enemyElement = entity.type === 'awakenedBoss' ? getElement(entity.elementId || state.bossElement) : null;
+    context.fillStyle = enemyElement ? enemyElement.color : boss ? colors.boss : colors.enemy;
     context.globalAlpha = entity.hit ? 0.5 : 1;
     context.beginPath();
     context.arc(entity.x, entity.y, entity.r, 0, Math.PI * 2);
     context.fill();
     context.globalAlpha = 1;
     if (boss) {
-      const bossElement = getElement(state.bossElement);
+      const bossElement = enemyElement;
       context.strokeStyle = entity.type === 'awakenedBoss' && bossElement ? bossElement.color : '#edb394';
       context.lineWidth = 3;
       context.stroke();
       context.fillStyle = colors.text;
       context.font = '9px DM Mono';
       context.textAlign = 'center';
-      context.fillText(entity.type === 'awakenedBoss' ? 'AWAKENED' : 'MINIBOSS', entity.x, entity.y + 3);
+      context.fillText(entity.type === 'awakenedBoss' && bossElement ? bossElement.awakenedName : entity.type === 'awakenedBoss' ? 'AWAKENED' : 'MINIBOSS', entity.x, entity.y + 3);
       context.fillStyle = '#392b3a';
       context.fillRect(entity.x - 32, entity.y - entity.r - 10, 64, 4);
       context.fillStyle = colors.loot;
@@ -1435,7 +1612,7 @@ function loop(time) {
 }
 
 function dash() {
-  if (!controlsChosen || state.health <= 0 || state.dashTimer > 0) return;
+  if (!controlsChosen || state.health <= 0 || state.playerStun > 0 || state.dashTimer > 0) return;
   state.dashTimer = state.dashCooldown;
   const hero = state.player;
   let dx = (state.keys.has('d') ? 1 : state.keys.has('a') ? -1 : 0) + joystick.x;
