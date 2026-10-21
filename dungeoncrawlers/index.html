@@ -3,7 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Circlebound | Dungeon Run</title>
+  <meta name="description" content="Fight through elemental rooms, collect fragments, unlock elements, and challenge dungeon bosses.">
+  <title>Circlebound | Elemental Dungeon</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -17,33 +18,48 @@
     </header>
     <section class="game-layout">
       <aside class="intro-panel">
-        <p class="eyebrow">TOP-DOWN DUNGEON / 01</p>
-        <h1>Find your<br><em>shape.</em></h1>
-        <p class="lede">Rooms shift. The dark circles bite. Gather relics and become something stranger.</p>
+        <p class="eyebrow">ELEMENTAL DUNGEON / 01</p>
+        <h1>Claim your<br><em>element.</em></h1>
+        <p class="lede">Fight through shifting rooms. Gather fragments, unlock an element, and face its awakened boss.</p>
         <div class="legend">
-          <div><span class="legend-dot hero-dot"></span><span>YOU</span><b>move + auto-fire</b></div>
-          <div><span class="legend-dot enemy-dot"></span><span>FOE</span><b>keep your distance</b></div>
-          <div><span class="legend-dot loot-dot"></span><span>RELIC</span><b>walk over to collect</b></div>
+          <div><span class="legend-dot hero-dot"></span><span>YOU</span><b>move + attack</b></div>
+          <div><span class="legend-dot enemy-dot"></span><span>FOE</span><b>defeat for fragments</b></div>
+          <div><span class="legend-dot loot-dot"></span><span>FRAGMENT</span><b>walk over to collect</b></div>
         </div>
       </aside>
       <section class="arena-wrap">
         <div class="arena-head"><span id="room-name">THE SUNKEN VESTIBULE</span><span id="wave-status">CLEAR THE ROOM</span></div>
-        <div class="canvas-frame"><canvas id="game-canvas" aria-label="Circlebound dungeon game"></canvas><div class="canvas-hint" id="canvas-hint">WASD / ARROWS TO MOVE</div><div class="mobile-controls" id="mobile-controls" aria-label="Mobile game controls"><div class="virtual-stick" id="move-stick" aria-label="Movement joystick"><div class="virtual-stick-knob"></div></div><button class="mobile-dash" id="mobile-dash" type="button">DASH</button></div></div>
-        <div class="arena-foot"><span><i class="key">WASD</i> MOVE</span><span><i class="key">SPACE</i> DASH</span><span><i class="key">R</i> NEW RUN</span></div>
+        <div class="canvas-frame"><canvas id="game-canvas" aria-label="Circlebound elemental dungeon game"></canvas><div class="canvas-hint" id="canvas-hint">WASD / ARROWS TO MOVE · Q RANGED · CLICK MELEE</div><div class="mobile-controls" id="mobile-controls" aria-label="Mobile game controls"><div class="virtual-stick" id="move-stick" aria-label="Movement joystick"><div class="virtual-stick-knob"></div></div><button class="mobile-action mobile-ranged" id="mobile-ranged" type="button">Q · RANGED</button><button class="mobile-action mobile-dash" id="mobile-dash" type="button">DASH</button></div></div>
+        <div class="arena-foot"><span><i class="key" id="arena-move-label">WASD</i> MOVE</span><span><i class="key">Q</i> RANGED · <i class="key">CLICK</i> MELEE</span><span><i class="key">SPACE</i> DASH</span><span><i class="key">R</i> NEW RUN</span></div>
       </section>
       <aside class="control-panel">
-        <div class="identity"><div class="class-orb" id="class-orb">●</div><div><p class="eyebrow">CURRENT CLASS</p><h2 id="class-name">WANDERER</h2><span id="class-desc">Balanced and brave</span></div></div>
+        <div class="identity"><div class="class-orb" id="element-orb">●</div><div><p class="eyebrow">CURRENT ELEMENT</p><h2 id="element-name">NONE</h2><span id="element-desc">NO ELEMENT · NO ABILITIES</span></div></div>
         <div class="resource"><span>VITALITY</span><strong id="health-value">100</strong><div class="meter"><span id="health-meter"></span></div></div>
-        <div class="stats"><div><span>LEVEL</span><strong id="level-value">01</strong></div><div><span>RELICS</span><strong id="loot-value">00</strong></div><div><span>DEPTH</span><strong id="depth-value">01</strong></div></div>
-        <div class="upgrade-block"><p class="eyebrow">CLASS ARCHIVE</p><div class="class-picker"><button class="class-option selected" data-class="wanderer"><i>01</i><span>WANDERER</span></button><button class="class-option locked" data-class="spark"><i>02</i><span>SPARK</span></button><button class="class-option locked" data-class="bruiser"><i>03</i><span>BRUISER</span></button></div><p class="unlock-note" id="unlock-note">Collect 5 relics to unlock SPARK.</p></div>
-        <div class="feed"><p class="eyebrow">FIELD NOTES</p><div id="log-lines"><p><span>00:00</span> The gate opens.</p><p><span>NOW</span> Find a way down.</p></div></div>
+        <div class="stats"><div><span>FRAGMENTS</span><strong id="fragments-value">00</strong></div><div><span>DEPTH</span><strong id="depth-value">01</strong></div></div>
+        <div class="element-block">
+          <div class="block-heading"><p class="eyebrow">ELEMENTS</p><span>UNLOCK / SWAP</span></div>
+          <div class="element-list" id="element-list" aria-label="Element unlocks and selection"></div>
+        </div>
+        <div class="ability-block">
+          <div class="block-heading"><p class="eyebrow">ELEMENT MOVES</p><span>BASE + AWAKENED</span></div>
+          <div class="ability-list" id="ability-list" aria-label="Element awakening moves"></div>
+        </div>
+        <div class="feed"><p class="eyebrow">FIELD NOTES</p><div id="log-lines"><p><span>NOW</span> No element equipped.</p><p><span>TIP</span> Q fires · click to melee.</p></div></div>
       </aside>
     </section>
     <footer><span>AN UNSTABLE DUNGEON CARTOGRAPHY</span><span>v.1.0.0</span></footer>
   </main>
   <div class="modal hidden" id="end-modal"><div class="modal-inner"><p class="eyebrow">RUN COMPLETE</p><h2 id="end-title">THE DUNGEON REMEMBERS</h2><p id="end-copy">Your circle made it further than most.</p><button class="primary-button" id="restart-button">START A NEW RUN <span>↗</span></button></div></div>
-  <div class="modal hidden" id="upgrade-modal"><div class="modal-inner"><p class="eyebrow">ROOM CLEARED / CHOOSE ONE</p><h2>CLAIM A RELIC</h2><div class="upgrade-choices"><button class="upgrade-choice" data-upgrade="vitality"><strong>VITALITY</strong><span>Restore 25 vitality</span></button><button class="upgrade-choice" data-upgrade="power"><strong>SHARP EDGE</strong><span>Deal 20% more damage</span></button><button class="upgrade-choice" data-upgrade="haste"><strong>QUICKEN</strong><span>Fire 15% faster</span></button></div></div></div>
-  <div class="modal controls-modal" id="controls-modal"><div class="modal-inner" role="dialog" aria-modal="true" aria-labelledby="controls-title"><p class="eyebrow">CIRCLEBOUND / CONTROL SETUP</p><h2 id="controls-title">CHOOSE YOUR CONTROLS</h2><p>Choose how you want to move through the dungeon.</p><div class="control-options"><button type="button" data-control-mode="mobile"><strong>MOBILE</strong><span>Joystick + dash button</span></button><button type="button" data-control-mode="computer"><strong>COMPUTER</strong><span>WASD / arrows + space to dash</span></button></div></div></div>
+  <div class="modal hidden" id="upgrade-modal"><div class="modal-inner"><p class="eyebrow">ROOM CLEARED / CHOOSE ONE</p><h2>CLAIM AN UPGRADE</h2><div class="upgrade-choices">
+    <button class="upgrade-choice" data-upgrade="vitality"><strong>VITALITY</strong><span>Restore 25 health.</span></button>
+    <button class="upgrade-choice" data-upgrade="power"><strong>SHARP EDGE</strong><span>Deal 20% more damage.</span></button>
+    <button class="upgrade-choice" data-upgrade="haste"><strong>QUICKEN</strong><span>Attack and cast 12% faster.</span></button>
+    <button class="upgrade-choice" data-upgrade="fleet"><strong>FLEET FOOT</strong><span>Move 15% faster.</span></button>
+    <button class="upgrade-choice" data-upgrade="reach"><strong>LONG REACH</strong><span>Melee reaches 25% farther.</span></button>
+    <button class="upgrade-choice" data-upgrade="quickstep"><strong>QUICKSTEP</strong><span>Dash cooldown is 20% shorter.</span></button>
+    <button class="upgrade-choice" data-upgrade="scavenger"><strong>SCAVENGER</strong><span>Every enemy drops 1 extra fragment.</span></button>
+  </div></div></div>
+  <div class="modal controls-modal" id="controls-modal"><div class="modal-inner" role="dialog" aria-modal="true" aria-labelledby="controls-title"><p class="eyebrow">CIRCLEBOUND / CONTROL SETUP</p><h2 id="controls-title">CHOOSE YOUR CONTROLS</h2><p>Move through the dungeon, fight enemies, and claim their fragments.</p><div class="control-options"><button type="button" data-control-mode="mobile"><strong>MOBILE</strong><span>Joystick + ranged + dash; tap the arena to melee</span></button><button type="button" data-control-mode="computer"><strong>COMPUTER</strong><span>WASD / arrows · Q ranged · click melee · space dash</span></button></div></div></div>
   <script src="game.js"></script>
 </body>
 </html>
