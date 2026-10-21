@@ -109,14 +109,14 @@ function generateRoom() {
   state.gateOpen = false;
   state.combo = 0;
   state.comboTimer = 0;
-  state.bossElement = state.room % 30 === 0 && getElement() && getElement().moves ? getElement().id : null;
+  state.bossElement = state.room % 10 === 0 && getElement() && getElement().moves ? getElement().id : null;
   const count = 3 + Math.min(5, state.room + 1);
   for (let i = 0; i < count; i++) state.entities.push(makeEnemy('enemy'));
-  if (state.room % 30 === 0) state.entities.push(makeEnemy('awakenedBoss'));
+  if (state.room % 10 === 0) state.entities.push(makeEnemy('awakenedBoss'));
   else if (state.room % 5 === 0) state.entities.push(makeEnemy('miniboss'));
   for (let i = 0; i < 8; i++) state.decorations.push({ x: 45 + Math.random() * (w - 90), y: 45 + Math.random() * (h - 90), r: 8 + Math.random() * 18, phase: Math.random() * Math.PI * 2 });
   document.getElementById('room-name').textContent = rooms[(state.room - 1) % rooms.length];
-  const isAwakenedBoss = state.room % 30 === 0;
+  const isAwakenedBoss = state.room % 10 === 0;
   const isMiniboss = state.room % 5 === 0;
   const status = isAwakenedBoss ? 'AWAKENED BOSS' : isMiniboss ? 'MINIBOSS' : 'CLEAR THE ROOM';
   document.getElementById('wave-status').textContent = status;
@@ -954,7 +954,7 @@ function updateHud() {
   document.getElementById('element-name').style.color = element ? element.color : '';
   document.getElementById('element-orb').style.color = element ? element.color : '';
   document.getElementById('element-orb').style.borderColor = element ? element.color : '';
-  document.getElementById('element-desc').textContent = element ? (profile.awakened.includes(element.id) ? 'AWAKENED ELEMENT' : 'ELEMENT EQUIPPED') : 'NO ELEMENT · NO ABILITIES';
+  document.getElementById('element-desc').textContent = element ? (profile.awakened.includes(element.id) ? 'AWAKENED ELEMENT' : element.moves ? 'ELEMENT EQUIPPED' : 'NO AWAKENING · BASE MOVES') : 'NO ELEMENT · NO ABILITIES';
   if (state.health <= 0) endRun();
 }
 
@@ -1000,7 +1000,7 @@ function renderAbilities() {
       const awakenButton = document.createElement('button');
       awakenButton.type = 'button';
       if (!profile.awakened.includes(element.id)) {
-        awakenButton.textContent = 'BOSS 30';
+        awakenButton.textContent = 'BOSS 10';
         awakenButton.disabled = true;
       } else if (hasAwakenedMove) {
         awakenButton.textContent = 'AWAKENED';
