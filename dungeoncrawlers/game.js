@@ -71,10 +71,10 @@ function resetRun() {
   document.getElementById('run-state').textContent = 'RUN IN PROGRESS';
   state = {
     room: 1, health: 100, maxHealth: 100, score: 0, combo: 0, comboTimer: 0,
-    lastTime: 0, rangedTimer: 0, meleeTimer: 0, dashTimer: 0, abilityTimers: [0, 0, 0, 0],
+    lastTime: 0, runTime: 0, historySampleTimer: 0, playerHistory: [], rangedTimer: 0, meleeTimer: 0, dashTimer: 0, abilityTimers: [0, 0, 0, 0],
     shake: 0, roomCleared: false, gateOpen: false, damageBoost: 1, fireBoost: 1, attackSpeed: 1,
     moveSpeed: 180, dashCooldown: 0.8, meleeRange: 80, fragmentBonus: 0, shield: 0,
-    bossElement: null, entities: [], shots: [], enemyShots: [], particles: [], decorations: [],
+    bossElement: null, entities: [], shots: [], enemyShots: [], particles: [], decorations: [], orbitingBlades: [], abilityEffects: [],
     player: { x: 0, y: 0, r: 14 }, keys: new Set()
   };
   keys.clear();
@@ -100,11 +100,14 @@ function size() {
 function generateRoom() {
   const { w, h } = size();
   state.player = { x: w / 2, y: h / 2, r: 14 };
+  state.playerHistory = [{ x: state.player.x, y: state.player.y, time: state.runTime }];
   state.entities = [];
   state.shots = [];
   state.enemyShots = [];
   state.particles = [];
   state.decorations = [];
+  state.orbitingBlades = [];
+  state.abilityEffects = [];
   state.roomCleared = false;
   state.gateOpen = false;
   state.combo = 0;
@@ -136,11 +139,14 @@ function makeEnemy(type) {
   const x = edge === 0 ? 30 : edge === 1 ? w - 30 : 50 + Math.random() * (w - 100);
   const y = edge === 2 ? 30 : edge === 3 ? h - 30 : 50 + Math.random() * (h - 100);
   const isBoss = type !== 'enemy';
-  const hp = type === 'awakenedBoss' ? 1500 + state.room * 15 : type === 'miniboss' ? 360 + state.room * 10 : Math.ceil((35 + state.room * 5) * 1.15);
+  const hpTier = Math.floor((state.room - 1) / 15);
+  const hpScale = 1 + hpTier * 0.25;
+  const baseHp = type === 'awakenedBoss' ? 1500 + state.room * 15 : type === 'miniboss' ? 360 + state.room * 10 : Math.ceil((35 + state.room * 5) * 1.15);
+  const hp = Math.ceil(baseHp * hpScale);
   return {
     type, x, y, r: type === 'awakenedBoss' ? 37 : type === 'miniboss' ? 27 : 11 + Math.random() * 4,
     hp, maxHp: hp, speed: type === 'awakenedBoss' ? 34 : type === 'miniboss' ? 27 : (38 + Math.random() * 20) * 1.15,
-    hit: 0, fireTimer: isBoss ? 1 + Math.random() : 0, burn: 0, poison: 0, slow: 0, root: 0, mark: 0, glitch: 0
+    hit: 0, fireTimer: isBoss ? 1 + Math.random() : 0, burn: 0, poison: 0, slow: 0, root: 0, mark: 0, glitch: 0, pause: 0
   };
 }
 
@@ -148,6 +154,7 @@ function update(dt) {
   if (!controlsChosen || state.health <= 0) return;
   const { w, h } = size();
   const hero = state.player;
+  state.runTime += dt;
   let dx = 0;
   let dy = 0;
   if (state.keys.has('w') || state.keys.has('arrowup')) dy--;
@@ -163,10 +170,18 @@ function update(dt) {
   }
   hero.x = Math.max(25, Math.min(w - 25, hero.x));
   hero.y = Math.max(25, Math.min(h - 25, hero.y));
+  state.historySampleTimer += dt;
+  if (state.historySampleTimer >= 0.1) {
+    state.playerHistory.push({ x: hero.x, y: hero.y, time: state.runTime });
+    state.historySampleTimer %= 0.1;
+    while (state.playerHistory.length > 1 && state.playerHistory[1].time < state.runTime - 3) state.playerHistory.shift();
+  }
   state.rangedTimer = Math.max(0, state.rangedTimer - dt);
   state.meleeTimer = Math.max(0, state.meleeTimer - dt);
   state.dashTimer = Math.max(0, state.dashTimer - dt);
   state.abilityTimers = state.abilityTimers.map(timer => Math.max(0, timer - dt));
+  for (const effect of state.abilityEffects) effect.life -= dt;
+  state.abilityEffects = state.abilityEffects.filter(effect => effect.life > 0);
   state.shield = Math.max(0, state.shield - dt);
   state.shake = Math.max(0, state.shake - dt);
   state.comboTimer = Math.max(0, state.comboTimer - dt);
@@ -192,9 +207,11 @@ function update(dt) {
     enemy.mark = Math.max(0, enemy.mark - dt);
     enemy.stun = Math.max(0, (enemy.stun || 0) - dt);
     enemy.glitch = Math.max(0, (enemy.glitch || 0) - dt);
+    enemy.pause = Math.max(0, (enemy.pause || 0) - dt);
     if (enemy.burn > 0) damageEnemy(enemy, (enemy.type === 'enemy' ? 9 : 14) * dt);
     if (enemy.poison > 0) damageEnemy(enemy, (enemy.type === 'enemy' ? 12 : 17) * dt);
     if (enemy.dead) continue;
+    if (enemy.pause > 0) continue;
     const angle = Math.atan2(hero.y - enemy.y, hero.x - enemy.x);
     const glitchAngle = angle + Math.sin(performance.now() / 45 + enemy.x) * 1.1;
     const speed = enemy.speed * (enemy.slow > 0 ? 0.45 : 1) * (enemy.root > 0 ? 0.12 : 1) * (enemy.stun > 0 ? 0.05 : 1) * (enemy.glitch > 0 ? 0.65 : 1);
@@ -221,6 +238,21 @@ function update(dt) {
       burst(hero.x, hero.y, colors.enemy, 5);
     }
   }
+  for (const blade of state.orbitingBlades) {
+    blade.life -= dt;
+    blade.angle += dt * 4.5;
+    blade.x = hero.x + Math.cos(blade.angle) * blade.orbitRadius;
+    blade.y = hero.y + Math.sin(blade.angle) * blade.orbitRadius;
+    for (const enemy of state.entities) {
+      if (enemy.type === 'fragment' || enemy.dead || blade.hitTargets.includes(enemy)) continue;
+      if (dist(blade, enemy) < enemy.r + 7) {
+        applyElementalHit(enemy, blade.damage, 'metal', 1, false);
+        blade.hitTargets.push(enemy);
+        burst(enemy.x, enemy.y, blade.color, 5);
+      }
+    }
+  }
+  state.orbitingBlades = state.orbitingBlades.filter(blade => blade.life > 0);
   for (const shot of state.shots) {
     shot.x += shot.vx * dt;
     shot.y += shot.vy * dt;
@@ -421,6 +453,8 @@ function useAbility(index) {
   const color = element.color;
   const enemies = state.entities.filter(enemy => enemy.type !== 'fragment' && !enemy.dead);
   const target = nearestEnemy();
+  const castOrigin = { x: hero.x, y: hero.y };
+  const targetPoint = target ? { x: target.x, y: target.y } : null;
   const bonus = awakened ? 1.65 : 1;
   const damage = value => value * bonus * state.damageBoost;
   if (element.id === 'time') {
@@ -490,9 +524,12 @@ function useAbility(index) {
           state.shots.push({ x: hero.x, y: hero.y, vx: Math.cos(angle) * 390, vy: Math.sin(angle) * 390, r: 9, damage: damage(40), color, elementId: element.id, abilityIndex: index, awakened, pierce: 2 });
         }
       } else {
-        for (let i = 0; i < 8; i++) {
-          const angle = i * Math.PI / 4;
-          state.shots.push({ x: hero.x + Math.cos(angle) * 22, y: hero.y + Math.sin(angle) * 22, vx: Math.cos(angle) * 300, vy: Math.sin(angle) * 300, r: 6, damage: damage(28), color, elementId: element.id, abilityIndex: index, awakened, pierce: 1 });
+        for (let i = 0; i < 3; i++) {
+          const angle = i * Math.PI * 2 / 3;
+          state.orbitingBlades.push({
+            angle, color, damage: damage(26), hitTargets: [], life: 4.5, orbitRadius: 42,
+            x: hero.x + Math.cos(angle) * 42, y: hero.y + Math.sin(angle) * 42
+          });
         }
       }
       burst(hero.x, hero.y, color, awakened ? 24 : 16);
@@ -509,7 +546,16 @@ function useAbility(index) {
       for (const enemy of enemies) if (dist(center, enemy) < (awakened ? 105 : 72)) applyElementalHit(enemy, damage(62), element.id, index, awakened);
       burst(center.x, center.y, color, awakened ? 26 : 17);
     } else if (element.id === 'ice') {
-      projectile(target, 31, { offsets: awakened ? [-0.42, -0.21, 0, 0.21, 0.42] : [-0.3, 0, 0.3], speed: 390, radius: 5 });
+      if (awakened) {
+        projectile(target, 31, { offsets: [-0.42, -0.21, 0, 0.21, 0.42], speed: 390, radius: 5 });
+      } else {
+        const center = target || hero;
+        for (const enemy of enemies) if (dist(center, enemy) < 105) {
+          applyElementalHit(enemy, damage(34), element.id, index, awakened);
+          enemy.slow = Math.max(enemy.slow, 5);
+        }
+        burst(center.x, center.y, color, 24);
+      }
     } else if (element.id === 'nature') {
       if (target) {
         applyElementalHit(target, damage(75), element.id, index, awakened);
@@ -574,11 +620,17 @@ function useAbility(index) {
       state.health = Math.min(state.maxHealth, state.health + drained);
       if (drained > 0) burst(hero.x, hero.y, color, 20);
     } else if (element.id === 'time') {
-      if (target) {
-        target.slow = Math.max(target.slow, awakened ? 12 : 8);
-        applyElementalHit(target, damage(62), element.id, index, awakened);
-        burst(target.x, target.y, color, 12);
+      const center = target || hero;
+      const radius = awakened ? 220 : 165;
+      const pauseDuration = awakened ? 4 : 2.5;
+      for (const enemy of enemies) {
+        if (dist(center, enemy) <= radius) {
+          applyElementalHit(enemy, damage(awakened ? 60 : 42), element.id, index, awakened);
+          enemy.pause = Math.max(enemy.pause || 0, pauseDuration);
+          burst(enemy.x, enemy.y, color, 10);
+        }
       }
+      burst(center.x, center.y, color, 26);
     } else {
       for (const enemy of enemies) enemy.slow = Math.max(enemy.slow, awakened ? 9 : 6);
       if (target) applyElementalHit(target, damage(62), element.id, index, awakened);
@@ -653,6 +705,18 @@ function useAbility(index) {
       state.health = Math.min(state.maxHealth, state.health + (awakened ? 45 : 28));
       state.health = Math.max(1, state.health - 8);
       burst(hero.x, hero.y, color, 18);
+    } else if (element.id === 'time') {
+      const rewindTime = state.runTime - 2;
+      let destination = state.playerHistory.find(position => position.time >= rewindTime);
+      if (!destination) destination = state.playerHistory[0];
+      if (destination) {
+        const oldX = hero.x;
+        const oldY = hero.y;
+        hero.x = Math.max(25, Math.min(size().w - 25, destination.x));
+        hero.y = Math.max(25, Math.min(size().h - 25, destination.y));
+        burst(oldX, oldY, color, 14);
+        burst(hero.x, hero.y, color, 24);
+      }
     } else {
       state.health = Math.min(state.maxHealth, state.health + (awakened ? 42 : 26));
       state.abilityTimers = state.abilityTimers.map((timer, i) => i === 2 ? timer : Math.max(0, timer - (awakened ? 4 : 2)));
@@ -774,6 +838,25 @@ function useAbility(index) {
       burst(hero.x, hero.y, color, 26);
     }
   }
+  const castDestination = { x: hero.x, y: hero.y };
+  const moved = dist(castOrigin, castDestination) > 20;
+  state.abilityEffects.push({
+    kind: moved ? 'teleport' : ['projectile', 'area', 'guard', 'ultimate'][index],
+    x: (index === 0 || index === 1 || index === 3) && targetPoint ? targetPoint.x : castDestination.x,
+    y: (index === 0 || index === 1 || index === 3) && targetPoint ? targetPoint.y : castDestination.y,
+    fromX: castOrigin.x,
+    fromY: castOrigin.y,
+    toX: castDestination.x,
+    toY: castDestination.y,
+    color,
+    label: element.moves && profile.awakened.includes(element.id) && profile.moves[element.id]?.[index]
+      ? element.awakeMoves[index]
+      : element.baseMoves[index],
+    key: moveKeys[index].toUpperCase(),
+    life: moved ? 0.85 : 0.7,
+    duration: moved ? 0.85 : 0.7,
+    angle: targetPoint ? Math.atan2(targetPoint.y - castOrigin.y, targetPoint.x - castOrigin.x) : Math.atan2(movementDirection().y, movementDirection().x)
+  });
   state.abilityTimers[index] = [5, 8, 12, 16][index] * (awakened ? 1.25 : 1) * state.attackSpeed;
   updateHud();
 }
@@ -831,6 +914,64 @@ function draw() {
     context.font = '9px DM Mono';
     context.fillText('EXIT', w / 2 - 11, 56);
   }
+  for (const effect of state.abilityEffects) {
+    const progress = 1 - effect.life / effect.duration;
+    const fade = Math.max(0, 1 - progress);
+    const radius = 24 + progress * 108;
+    context.save();
+    context.globalAlpha = fade;
+    context.strokeStyle = effect.color;
+    context.fillStyle = effect.color;
+    context.lineWidth = 3;
+    context.shadowColor = effect.color;
+    context.shadowBlur = 14;
+    if (effect.kind === 'projectile') {
+      const length = Math.hypot(effect.x - effect.fromX, effect.y - effect.fromY);
+      const endX = effect.fromX + Math.cos(effect.angle) * Math.min(length, 150);
+      const endY = effect.fromY + Math.sin(effect.angle) * Math.min(length, 150);
+      context.beginPath();
+      context.moveTo(effect.fromX, effect.fromY);
+      context.lineTo(endX, endY);
+      context.stroke();
+      context.beginPath();
+      context.arc(endX, endY, 8 + progress * 5, 0, Math.PI * 2);
+      context.fill();
+    } else if (effect.kind === 'area' || effect.kind === 'ultimate') {
+      context.beginPath();
+      context.arc(effect.x, effect.y, effect.kind === 'ultimate' ? radius * 1.25 : radius, 0, Math.PI * 2);
+      context.stroke();
+      if (effect.kind === 'ultimate') {
+        context.beginPath();
+        context.arc(effect.x, effect.y, Math.max(8, radius * 0.62), 0, Math.PI * 2);
+        context.stroke();
+      }
+    } else if (effect.kind === 'teleport') {
+      for (const point of [{ x: effect.fromX, y: effect.fromY }, { x: effect.toX, y: effect.toY }]) {
+        context.beginPath();
+        context.ellipse(point.x, point.y, 17 + progress * 22, 10 + progress * 11, effect.angle, 0, Math.PI * 2);
+        context.stroke();
+      }
+    } else {
+      context.beginPath();
+      context.arc(effect.x, effect.y, 22 + progress * 15, 0, Math.PI * 2);
+      context.stroke();
+      context.beginPath();
+      for (let side = 0; side < 6; side++) {
+        const angle = effect.angle + side * Math.PI / 3 + progress * 0.5;
+        const x = effect.x + Math.cos(angle) * 38;
+        const y = effect.y + Math.sin(angle) * 38;
+        if (side === 0) context.moveTo(x, y);
+        else context.lineTo(x, y);
+      }
+      context.closePath();
+      context.stroke();
+    }
+    context.shadowBlur = 0;
+    context.font = '600 9px DM Mono';
+    context.textAlign = 'center';
+    context.fillText(`${effect.key} · ${effect.label}`, effect.x, effect.y - 27 - progress * 12);
+    context.restore();
+  }
   for (const shot of state.shots) {
     context.strokeStyle = shot.color || 'rgba(247,233,180,.35)';
     context.lineWidth = 3;
@@ -842,6 +983,23 @@ function draw() {
     context.beginPath();
     context.arc(shot.x, shot.y, shot.r, 0, Math.PI * 2);
     context.fill();
+  }
+  for (const blade of state.orbitingBlades) {
+    context.save();
+    context.translate(blade.x, blade.y);
+    context.rotate(blade.angle);
+    context.fillStyle = blade.color;
+    context.strokeStyle = '#e0e5ec';
+    context.lineWidth = 1.5;
+    context.beginPath();
+    context.moveTo(0, -12);
+    context.lineTo(5, -2);
+    context.lineTo(0, 12);
+    context.lineTo(-5, -2);
+    context.closePath();
+    context.fill();
+    context.stroke();
+    context.restore();
   }
   for (const shot of state.enemyShots) {
     context.strokeStyle = 'rgba(191,82,98,.38)';
@@ -988,7 +1146,15 @@ function renderAbilities() {
     key.textContent = moveKeys[index].toUpperCase();
     const name = document.createElement('span');
     const hasAwakenedMove = Boolean(element && element.moves && profile.awakened.includes(element.id) && profile.moves[element.id]?.[index]);
-    name.textContent = element ? `${elementName(element)} · ${hasAwakenedMove ? element.awakeMoves[index] : element.baseMoves[index]}` : `ELEMENT MOVE ${index + 1}`;
+    const moveName = element ? hasAwakenedMove ? element.awakeMoves[index] : element.baseMoves[index] : `ELEMENT MOVE ${index + 1}`;
+    name.textContent = element ? `${elementName(element)} · ${moveName}` : moveName;
+    const mobileButton = document.querySelector(`[data-mobile-ability="${index}"]`);
+    mobileButton.dataset.castMove = String(index);
+    mobileButton.querySelector('kbd').textContent = moveKeys[index].toUpperCase();
+    mobileButton.querySelector('span').textContent = element ? moveName : 'LOCKED';
+    mobileButton.setAttribute('aria-label', element ? `${moveKeys[index].toUpperCase()}: ${moveName}` : `Element move ${index + 1}: locked`);
+    mobileButton.disabled = !element;
+    mobileButton.classList.toggle('ready', hasAwakenedMove);
     const castButton = document.createElement('button');
     castButton.type = 'button';
     castButton.textContent = element ? 'READY' : 'LOCKED';
@@ -1120,6 +1286,7 @@ canvas.addEventListener('pointerdown', event => {
 });
 document.getElementById('element-list').addEventListener('click', handleElementClick);
 document.getElementById('ability-list').addEventListener('click', handleElementClick);
+document.getElementById('mobile-abilities').addEventListener('click', handleElementClick);
 document.querySelectorAll('[data-control-mode]').forEach(button => button.addEventListener('click', () => {
   controlMode = button.dataset.controlMode;
   controlsChosen = true;
