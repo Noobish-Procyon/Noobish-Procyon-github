@@ -433,7 +433,12 @@ function applyElementalHit(enemy, damage, elementId, abilityIndex, awakened) {
   if (enemy.dead) return;
   const element = getElement(elementId);
   const markedDamage = enemy.mark > 0 ? 1.35 : 1;
-  damageEnemy(enemy, damage * markedDamage);
+  const dealt = Math.min(enemy.hp, damage * markedDamage);
+  damageEnemy(enemy, dealt);
+  if (elementId === 'blood') {
+    const lifeSteal = abilityIndex === 3 ? 0.24 : 0.16;
+    state.health = Math.min(state.maxHealth, state.health + dealt * lifeSteal);
+  }
   if (enemy.dead || !element) return;
   const bonus = awakened ? 1.5 : 1;
   if (element.id === 'fire') enemy.burn = Math.max(enemy.burn, (abilityIndex === 3 ? 5 : 2.5) * bonus);
@@ -447,10 +452,8 @@ function applyElementalHit(enemy, damage, elementId, abilityIndex, awakened) {
   if (element.id === 'light') enemy.mark = Math.max(enemy.mark, (abilityIndex === 3 ? 6 : 3) * bonus);
   if (element.id === 'dark') state.health = Math.min(state.maxHealth, state.health + damage * 0.06 * bonus);
   if (element.id === 'poison') enemy.poison = Math.max(enemy.poison, (abilityIndex === 1 || abilityIndex === 3 ? 6 : 3) * bonus);
-  if (element.id === 'electric' && abilityIndex === 0) chainLightning(enemy, damage * (awakened ? 0.65 : 0.4), 2 + Number(awakened));
   if (element.id === 'crystal' && abilityIndex === 0) enemy.hit = Math.max(enemy.hit, 0.16);
   if (element.id === 'digital') enemy.glitch = Math.max(enemy.glitch || 0, awakened ? 4 : 2.5);
-  if (element.id === 'blood') state.health = Math.min(state.maxHealth, state.health + damage * (abilityIndex === 3 ? 0.22 : 0.12) * bonus);
   if (element.id === 'time') enemy.slow = Math.max(enemy.slow, (awakened ? 5 : 3) * bonus);
 }
 
@@ -568,7 +571,8 @@ function useAbility(index) {
   if (index === 0) {
     if (element.id === 'electric') {
       if (target) {
-        applyElementalHit(target, damage(58), element.id, index, awakened);
+        applyElementalHit(target, damage(awakened ? 82 : 58), element.id, index, awakened);
+        target.stun = Math.max(target.stun || 0, awakened ? 0.7 : 0.35);
       }
     } else if (element.id === 'digital') {
       if (target) {
@@ -687,21 +691,19 @@ function useAbility(index) {
       burst(center.x, center.y, color, 18);
     } else if (element.id === 'electric') {
       if (target) {
-        applyElementalHit(target, damage(48), element.id, index, awakened);
-        chainLightning(target, damage(40), awakened ? 7 : 4);
+        applyElementalHit(target, damage(awakened ? 42 : 28), element.id, index, awakened);
+        chainLightning(target, damage(awakened ? 58 : 48), awakened ? 8 : 5);
       }
     } else if (element.id === 'crystal') {
       projectile(target, 28, { offsets: awakened ? [-0.55, -0.36, -0.18, 0, 0.18, 0.36, 0.55] : [-0.42, -0.14, 0.14, 0.42], speed: 470, radius: 6, pierce: 1 });
     } else if (element.id === 'blood') {
       const radius = awakened ? 125 : 92;
-      let drained = 0;
+      let hitCount = 0;
       for (const enemy of enemies) if (dist(hero, enemy) < radius) {
-        const stolen = damage(42);
-        applyElementalHit(enemy, stolen, element.id, index, awakened);
-        drained += stolen * 0.22;
+        applyElementalHit(enemy, damage(42), element.id, index, awakened);
+        hitCount++;
       }
-      state.health = Math.min(state.maxHealth, state.health + drained);
-      if (drained > 0) burst(hero.x, hero.y, color, 20);
+      if (hitCount > 0) burst(hero.x, hero.y, color, 20);
     } else if (element.id === 'time') {
       const center = target || hero;
       const radius = awakened ? 220 : 165;
@@ -778,9 +780,22 @@ function useAbility(index) {
       burst(hero.x, hero.y, color, 20);
     } else if (element.id === 'electric') {
       const direction = movementDirection();
+      const start = { x: hero.x, y: hero.y };
       hero.x = Math.max(25, Math.min(size().w - 25, hero.x + direction.x * 145));
       hero.y = Math.max(25, Math.min(size().h - 25, hero.y + direction.y * 145));
-      hitArea(48, 55);
+      const dashX = hero.x - start.x;
+      const dashY = hero.y - start.y;
+      const dashLength = Math.hypot(dashX, dashY) || 1;
+      for (const enemy of enemies) {
+        const along = ((enemy.x - start.x) * dashX + (enemy.y - start.y) * dashY) / dashLength;
+        const across = Math.abs((enemy.x - start.x) * dashY - (enemy.y - start.y) * dashX) / dashLength;
+        if (along >= 0 && along <= dashLength && across < enemy.r + 18) {
+          applyElementalHit(enemy, damage(awakened ? 88 : 58), element.id, index, awakened);
+          enemy.stun = Math.max(enemy.stun || 0, 0.35);
+        }
+      }
+      burst(start.x, start.y, color, 8);
+      burst(hero.x, hero.y, color, 20);
     } else if (element.id === 'crystal') {
       state.shield = awakened ? 14 : 9;
       burst(hero.x, hero.y, color, 24);
@@ -886,9 +901,18 @@ function useAbility(index) {
       state.health = Math.min(state.maxHealth, state.health + (awakened ? 32 : 18));
     } else if (element.id === 'poison') {
       const center = target || hero;
-      for (const enemy of enemies) if (dist(center, enemy) < (awakened ? 190 : 135)) {
-        enemy.poison = Math.max(enemy.poison, awakened ? 15 : 10);
-        enemy.slow = Math.max(enemy.slow, 2.5);
+      for (const enemy of enemies) if (enemy.poison > 0) {
+        if (dist(center, enemy) < (awakened ? 250 : 185)) {
+          const storedPoison = enemy.poison;
+          enemy.poison = 0;
+          damageEnemy(enemy, damage(awakened ? 58 : 40) + storedPoison * (awakened ? 8 : 6));
+          burst(enemy.x, enemy.y, color, 14);
+          for (const nearby of enemies) {
+            if (nearby !== enemy && dist(enemy, nearby) < 72) {
+              nearby.poison = Math.max(nearby.poison, awakened ? 5 : 3);
+            }
+          }
+        }
       }
       burst(center.x, center.y, color, 34);
     } else if (element.id === 'electric') {
@@ -910,7 +934,6 @@ function useAbility(index) {
         const threshold = awakened ? 0.35 : 0.2;
         const strike = weakest.hp / weakest.maxHp < threshold ? weakest.hp + 1 : damage(awakened ? 155 : 105);
         applyElementalHit(weakest, strike, element.id, index, awakened);
-        state.health = Math.min(state.maxHealth, state.health + (awakened ? 55 : 32));
         burst(weakest.x, weakest.y, color, 25);
       }
     } else {
@@ -932,6 +955,7 @@ function useAbility(index) {
     toX: castDestination.x,
     toY: castDestination.y,
     color,
+    elementId: element.id,
     label: element.moves && profile.awakened.includes(element.id) && profile.moves[element.id]?.[index]
       ? element.awakeMoves[index]
       : element.baseMoves[index],
@@ -960,6 +984,108 @@ function movementDirection() {
 function nearestEnemy() {
   const enemies = state.entities.filter(entity => entity.type !== 'fragment' && !entity.dead);
   return enemies.length ? enemies.reduce((nearest, enemy) => dist(state.player, enemy) < dist(state.player, nearest) ? enemy : nearest) : null;
+}
+
+function drawElementMotif(effect, progress) {
+  const { x, y, color, elementId } = effect;
+  const radius = 18 + progress * 42;
+  context.strokeStyle = color;
+  context.fillStyle = color;
+  context.lineWidth = 2;
+  context.beginPath();
+  if (elementId === 'fire') {
+    for (let i = 0; i < 3; i++) {
+      const offset = i * Math.PI * 2 / 3 + progress * 3;
+      context.moveTo(x + Math.cos(offset) * 8, y + Math.sin(offset) * 8);
+      context.quadraticCurveTo(x + Math.cos(offset + 0.35) * radius, y + Math.sin(offset + 0.35) * radius, x + Math.cos(offset + 0.7) * 8, y + Math.sin(offset + 0.7) * 8);
+    }
+    context.stroke();
+  } else if (elementId === 'ice') {
+    for (let i = 0; i < 6; i++) {
+      const angle = i * Math.PI / 3 + progress * 0.5;
+      context.moveTo(x, y);
+      context.lineTo(x + Math.cos(angle) * radius, y + Math.sin(angle) * radius);
+      context.lineTo(x + Math.cos(angle + 0.18) * radius * 0.48, y + Math.sin(angle + 0.18) * radius * 0.48);
+    }
+    context.stroke();
+  } else if (elementId === 'nature') {
+    for (let i = 0; i < 4; i++) {
+      const angle = i * Math.PI / 2 + progress;
+      const tipX = x + Math.cos(angle) * radius;
+      const tipY = y + Math.sin(angle) * radius;
+      context.moveTo(x, y);
+      context.lineTo(tipX, tipY);
+      context.moveTo(x + Math.cos(angle) * radius * 0.55, y + Math.sin(angle) * radius * 0.55);
+      context.lineTo(x + Math.cos(angle + 0.55) * radius * 0.78, y + Math.sin(angle + 0.55) * radius * 0.78);
+    }
+    context.stroke();
+  } else if (elementId === 'water') {
+    for (let i = 0; i < 3; i++) {
+      const yOffset = (i - 1) * 10;
+      context.moveTo(x - radius, y + yOffset);
+      context.quadraticCurveTo(x - radius * 0.45, y + yOffset - 12, x, y + yOffset);
+      context.quadraticCurveTo(x + radius * 0.45, y + yOffset + 12, x + radius, y + yOffset);
+    }
+    context.stroke();
+  } else if (elementId === 'light') {
+    for (let i = 0; i < 12; i++) {
+      const angle = i * Math.PI / 6;
+      context.moveTo(x + Math.cos(angle) * 10, y + Math.sin(angle) * 10);
+      context.lineTo(x + Math.cos(angle) * radius, y + Math.sin(angle) * radius);
+    }
+    context.stroke();
+  } else if (elementId === 'dark') {
+    for (let i = 0; i < 3; i++) {
+      const start = progress * 5 + i * Math.PI * 2 / 3;
+      context.moveTo(x + Math.cos(start) * radius, y + Math.sin(start) * radius);
+      for (let step = 1; step <= 12; step++) {
+        const t = step / 12;
+        const angle = start + t * Math.PI * 1.5;
+        const r = radius * (1 - t * 0.88);
+        context.lineTo(x + Math.cos(angle) * r, y + Math.sin(angle) * r);
+      }
+    }
+    context.stroke();
+  } else if (elementId === 'poison') {
+    for (let i = 0; i < 7; i++) {
+      const angle = i * 2.4 + progress * 2;
+      const bubbleRadius = 2 + (i % 3) * 1.5;
+      context.moveTo(x + Math.cos(angle) * radius + bubbleRadius, y + Math.sin(angle) * radius);
+      context.arc(x + Math.cos(angle) * radius, y + Math.sin(angle) * radius, bubbleRadius, 0, Math.PI * 2);
+    }
+    context.stroke();
+  } else if (elementId === 'electric') {
+    for (let i = 0; i < 4; i++) {
+      const angle = i * Math.PI / 2 + progress;
+      for (let step = 0; step <= 4; step++) {
+        const distance = radius * step / 4;
+        const jitter = step === 0 || step === 4 ? 0 : (step % 2 ? 7 : -7);
+        const px = x + Math.cos(angle) * distance - Math.sin(angle) * jitter;
+        const py = y + Math.sin(angle) * distance + Math.cos(angle) * jitter;
+        if (step === 0) context.moveTo(px, py);
+        else context.lineTo(px, py);
+      }
+    }
+    context.stroke();
+  } else if (elementId === 'blood') {
+    for (let i = 0; i < 5; i++) {
+      const angle = i * Math.PI * 2 / 5 + progress;
+      const px = x + Math.cos(angle) * radius * 0.72;
+      const py = y + Math.sin(angle) * radius * 0.72;
+      context.moveTo(px, py - 6);
+      context.quadraticCurveTo(px + 5, py, px, py + 5);
+      context.quadraticCurveTo(px - 5, py, px, py - 6);
+    }
+    context.stroke();
+  } else if (elementId === 'digital') {
+    for (let i = -2; i <= 2; i++) {
+      const lineY = y + i * 8;
+      const shift = Math.sin(progress * 18 + i) * 12;
+      context.rect(x - radius + shift, lineY, radius * 0.75, 2);
+      context.rect(x + radius * 0.25 - shift, lineY + 3, radius * 0.4, 2);
+    }
+    context.stroke();
+  }
 }
 
 function draw() {
@@ -1049,6 +1175,7 @@ function draw() {
       context.closePath();
       context.stroke();
     }
+    drawElementMotif(effect, progress);
     context.shadowBlur = 0;
     context.font = '600 9px DM Mono';
     context.textAlign = 'center';
